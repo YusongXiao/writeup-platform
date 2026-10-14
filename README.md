@@ -1,7 +1,7 @@
 # writeup-platform
 
 A self-hosted **CTF writeup submission platform**, built to plug into the
-**ret2shell** CTF platform. Players log in with a ret2shell
+[**ret2shell**](https://github.com/ret2shell/ret2shell) CTF platform. Players log in with a ret2shell
 captcha code, browse training arenas and competitions, and upload their writeups
 (PDF / docx). Game admins can review, batch-download, and manage submissions.
 
@@ -148,6 +148,11 @@ require permission `5` **and** the user's id in the game's `admins` list.
   leak production secrets.
 - Uploaded filenames are sanitized and storage paths are constructed from
   server-generated ids, not user input.
+
+## Related projects
+
+- [ret2shell](https://github.com/ret2shell/ret2shell) — the CTF platform this
+  service integrates with for authentication and game/team data.
 
 ## License
 
