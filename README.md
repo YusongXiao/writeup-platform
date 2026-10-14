@@ -1,3 +1,5 @@
+**English** · [简体中文](README-cn.md)
+
 # writeup-platform
 
 A self-hosted **CTF writeup submission platform**, built to plug into the
