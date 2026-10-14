@@ -1,0 +1,65 @@
+/* ── Frutiger Aero (Vista/7 era glass aesthetic) ────────────────────────── */
+@import url('/fonts/frutiger.css');
+
+[data-theme="frutiger-aero"] {
+  --bg:           #c8e8f8;
+  --bg-elevated:  #e8f4fc;
+  --bg-sunken:    #b0d8f0;
+  --surface:      rgba(255,255,255,0.55);
+  --surface-hover:rgba(255,255,255,0.72);
+  --overlay:      rgba(255,255,255,0.20);
+
+  --text-primary:   #1a3a52;
+  --text-secondary: #3a6a8a;
+  --text-tertiary:  #6a9ab8;
+  --text-on-accent: #ffffff;
+
+  --accent:         #1e7fc0;
+  --accent-hover:   #2490d8;
+  --accent-muted:   rgba(30,127,192,0.15);
+  --accent-glow:    rgba(30,127,192,0.30);
+
+  --border:         rgba(255,255,255,0.60);
+  --border-strong:  rgba(30,127,192,0.25);
+  --border-focus:   var(--accent);
+
+  --success:        #3cb878;
+  --success-muted:  rgba(60,184,120,0.15);
+  --warning:        #f5a623;
+  --warning-muted:  rgba(245,166,35,0.15);
+  --danger:         #e84040;
+  --danger-muted:   rgba(232,64,64,0.15);
+
+  --shadow-sm:  0 2px 8px rgba(30,100,160,0.12), 0 1px 3px rgba(255,255,255,0.60) inset;
+  --shadow-md:  0 6px 24px rgba(30,100,160,0.18), 0 1px 4px rgba(255,255,255,0.50) inset;
+  --shadow-lg:  0 16px 48px rgba(30,100,160,0.22), 0 2px 6px rgba(255,255,255,0.45) inset;
+
+  --radius-sm:  10px;
+  --radius-md:  16px;
+  --radius-lg:  22px;
+  --radius-xl:  30px;
+
+  --font-sans:    'Quicksand', 'Nunito', 'Segoe UI', sans-serif;
+  --font-display: 'Nunito', 'Quicksand', 'Segoe UI', sans-serif;
+  --font-mono:    'Consolas', 'Fira Code', monospace;
+
+  /* Aero-specific extras */
+  --glass-bg: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.65) 0%,
+    rgba(200,232,248,0.45) 50%,
+    rgba(255,255,255,0.55) 100%
+  );
+  --glass-highlight: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.80) 0%,
+    rgba(255,255,255,0.20) 50%,
+    transparent 100%
+  );
+  --sky-gradient: linear-gradient(
+    180deg,
+    #a8d8f0 0%,
+    #c8e8f8 40%,
+    #e0f2fc 100%
+  );
+}

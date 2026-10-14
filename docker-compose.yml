@@ -1,0 +1,50 @@
+name: writeup-platform
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: writeup
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: writeup
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U writeup -d writeup"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  server:
+    build:
+      context: .
+      target: server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      CONFIG_PATH: /etc/writeup-platform/config.toml
+    volumes:
+      - ./config:/etc/writeup-platform:ro
+      - writeup_storage:/var/lib/writeup-platform/storage
+    expose:
+      - "8080"
+
+  frontend:
+    build:
+      context: .
+      target: frontend-serve
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "${LISTEN_PORT:-3000}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  postgres_data:
+  writeup_storage:

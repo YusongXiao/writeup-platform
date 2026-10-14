@@ -1,0 +1,45 @@
+# ── Rust / Cargo ────────────────────────────────────────────────────────────
+/target
+**/target
+**/*.rs.bk
+*.pdb
+
+# ── Secrets & local config ──────────────────────────────────────────────────
+# Real config carries DB passwords and the ret2shell JWT signing key.
+# Commit config/config.toml.example instead.
+/config/config.toml
+.env
+.env.*
+!.env.example
+
+# ── Frontend (Node) ─────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/coverage/
+*.local
+frontend/.eslintcache
+frontend/*.tsbuildinfo
+
+# ── Editors / OS ────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# ── Logs ────────────────────────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Local data ──────────────────────────────────────────────────────────────
+/storage/

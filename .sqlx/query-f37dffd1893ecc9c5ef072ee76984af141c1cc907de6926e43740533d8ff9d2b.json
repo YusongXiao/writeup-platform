@@ -1,0 +1,96 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO writeup\n            (user_id, user_account, user_nickname, game_id, game_name,\n             file_path, file_name, file_size, file_type, submitted_at, updated_at)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())\n        ON CONFLICT (user_id, game_id) DO UPDATE SET\n            user_account  = EXCLUDED.user_account,\n            user_nickname = EXCLUDED.user_nickname,\n            game_name     = EXCLUDED.game_name,\n            file_path     = EXCLUDED.file_path,\n            file_name     = EXCLUDED.file_name,\n            file_size     = EXCLUDED.file_size,\n            file_type     = EXCLUDED.file_type,\n            updated_at    = NOW()\n        RETURNING *\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_account",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "user_nickname",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "game_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "game_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "file_path",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "file_size",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "file_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "submitted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f37dffd1893ecc9c5ef072ee76984af141c1cc907de6926e43740533d8ff9d2b"
+}

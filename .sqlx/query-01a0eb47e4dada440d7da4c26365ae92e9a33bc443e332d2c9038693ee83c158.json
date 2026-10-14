@@ -1,0 +1,90 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM writeup WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_account",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "user_nickname",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "game_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "game_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "file_path",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "file_size",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "file_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "submitted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "01a0eb47e4dada440d7da4c26365ae92e9a33bc443e332d2c9038693ee83c158"
+}

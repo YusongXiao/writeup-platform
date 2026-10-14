@@ -1,0 +1,182 @@
+use axum::{
+    Router,
+    extract::{Path, Query, State},
+    http::{HeaderMap, HeaderValue, header},
+    response::IntoResponse,
+    routing::get,
+    Json,
+};
+use serde::Deserialize;
+use std::sync::Arc;
+
+use crate::{
+    error::{AppError, Result},
+    middleware::auth::RequiredToken,
+    state::AppState,
+    storage,
+};
+
+#[derive(Debug, Deserialize)]
+pub struct PageQuery {
+    #[serde(default = "default_page")]
+    pub page: i64,
+    #[serde(default = "default_page_size")]
+    pub page_size: i64,
+}
+
+fn default_page() -> i64 { 1 }
+fn default_page_size() -> i64 { 50 }
+
+pub fn router() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/game/{game_id}/writeup", get(list_writeups))
+        .route("/game/{game_id}/writeup/download", get(download_all))
+        .route("/game/{game_id}/writeup/{user_id}/file", get(download_one))
+        .route("/game/{game_id}/writeup/{user_id}", axum::routing::delete(delete_one))
+}
+
+#[derive(sqlx::FromRow)]
+struct GameAdminRow {
+    name: String,
+    admins: serde_json::Value,
+}
+
+async fn require_game_admin(
+    state: &AppState,
+    token: &crate::middleware::auth::Token,
+    game_id: i64,
+) -> Result<String> {
+    let row = sqlx::query_as::<_, GameAdminRow>(
+        "SELECT name, admins FROM game WHERE id = $1",
+    )
+    .bind(game_id)
+    .fetch_optional(&state.r2s_db)
+    .await
+    .map_err(anyhow::Error::from)?
+    .ok_or_else(|| AppError::NotFound("game not found".into()))?;
+
+    let admins: Vec<i64> = serde_json::from_value(row.admins).unwrap_or_default();
+
+    if !token.is_game_admin(&admins) {
+        return Err(AppError::Forbidden("not a game admin".into()));
+    }
+    Ok(row.name)
+}
+
+async fn list_writeups(
+    State(state): State<Arc<AppState>>,
+    RequiredToken(token): RequiredToken,
+    Path(game_id): Path<i64>,
+    Query(q): Query<PageQuery>,
+) -> Result<impl IntoResponse> {
+    require_game_admin(&state, &token, game_id).await?;
+
+    let page = q.page.max(1);
+    let page_size = q.page_size.clamp(1, 100);
+    let (items, total) = database::writeup::find_by_game(&state.db, game_id, page, page_size)
+        .await
+        .map_err(anyhow::Error::from)?;
+
+    Ok(Json(serde_json::json!({ "items": items, "total": total })))
+}
+
+async fn download_all(
+    State(state): State<Arc<AppState>>,
+    RequiredToken(token): RequiredToken,
+    Path(game_id): Path<i64>,
+) -> Result<impl IntoResponse> {
+    require_game_admin(&state, &token, game_id).await?;
+
+    let writeups = database::writeup::find_all_by_game(&state.db, game_id)
+        .await
+        .map_err(anyhow::Error::from)?;
+
+    let zip_data = storage::zip_game_writeups(&state.config.storage.path, &writeups)
+        .await
+        .map_err(anyhow::Error::from)?;
+
+    let filename = format!("writeups-{}.zip", game_id);
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/zip"));
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_str(&format!("attachment; filename=\"{}\"", filename)).unwrap(),
+    );
+
+    Ok((headers, zip_data))
+}
+
+async fn download_one(
+    State(state): State<Arc<AppState>>,
+    RequiredToken(token): RequiredToken,
+    Path((game_id, user_id)): Path<(i64, i64)>,
+) -> Result<impl IntoResponse> {
+    require_game_admin(&state, &token, game_id).await?;
+
+    let host_type: Option<i32> = sqlx::query_scalar("SELECT host_type FROM game WHERE id = $1")
+        .bind(game_id)
+        .fetch_optional(&state.r2s_db)
+        .await
+        .map_err(anyhow::Error::from)?;
+
+    let team_id = if host_type == Some(1) {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT t.id FROM team t JOIN user2_team u2t ON u2t.team_id = t.id WHERE u2t.user_id = $1 AND t.game_id = $2 LIMIT 1",
+        )
+        .bind(user_id)
+        .bind(game_id)
+        .fetch_optional(&state.r2s_db)
+        .await
+        .map_err(anyhow::Error::from)?
+    } else {
+        None
+    };
+
+    let w = database::writeup::find_by_user_and_game(&state.db, user_id, game_id, team_id)
+        .await
+        .map_err(anyhow::Error::from)?
+        .ok_or_else(|| AppError::NotFound("writeup not found".into()))?;
+
+    crate::routes::writeup::serve_file(state.config.storage.path.clone(), w).await
+}
+
+async fn delete_one(
+    State(state): State<Arc<AppState>>,
+    RequiredToken(token): RequiredToken,
+    Path((game_id, user_id)): Path<(i64, i64)>,
+) -> Result<impl IntoResponse> {
+    require_game_admin(&state, &token, game_id).await?;
+
+    let host_type: Option<i32> = sqlx::query_scalar("SELECT host_type FROM game WHERE id = $1")
+        .bind(game_id)
+        .fetch_optional(&state.r2s_db)
+        .await
+        .map_err(anyhow::Error::from)?;
+
+    let team_id = if host_type == Some(1) {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT t.id FROM team t JOIN user2_team u2t ON u2t.team_id = t.id WHERE u2t.user_id = $1 AND t.game_id = $2 LIMIT 1",
+        )
+        .bind(user_id)
+        .bind(game_id)
+        .fetch_optional(&state.r2s_db)
+        .await
+        .map_err(anyhow::Error::from)?
+    } else {
+        None
+    };
+
+    let w = database::writeup::find_by_user_and_game(&state.db, user_id, game_id, team_id)
+        .await
+        .map_err(anyhow::Error::from)?
+        .ok_or_else(|| AppError::NotFound("writeup not found".into()))?;
+
+    database::writeup::delete_by_id(&state.db, w.id)
+        .await
+        .map_err(anyhow::Error::from)?;
+
+    let abs_path = std::path::PathBuf::from(&state.config.storage.path).join(&w.file_path);
+    let _ = crate::storage::delete_file(&abs_path).await;
+
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}

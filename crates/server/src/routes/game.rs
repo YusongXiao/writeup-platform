@@ -1,0 +1,142 @@
+use axum::{
+    Router,
+    extract::{Query, State},
+    response::IntoResponse,
+    routing::get,
+    Json,
+};
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+use crate::{error::Result, state::AppState};
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct GameRow {
+    pub id: i64,
+    pub name: String,
+    pub brief: String,
+    pub host_type: i32,
+    pub start_at: chrono::DateTime<Utc>,
+    pub end_at: Option<chrono::DateTime<Utc>>,
+    pub archive_at: Option<chrono::DateTime<Utc>>,
+    pub hidden: bool,
+    pub admins: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GameItem {
+    pub id: i64,
+    pub name: String,
+    pub brief: String,
+    pub host_type: i32,
+    pub start_at: chrono::DateTime<Utc>,
+    pub end_at: Option<chrono::DateTime<Utc>>,
+    pub archive_at: Option<chrono::DateTime<Utc>>,
+    pub can_submit: bool,
+    pub admins: Vec<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GameListQuery {
+    #[serde(default = "default_page")]
+    pub page: i64,
+    #[serde(default = "default_page_size")]
+    pub page_size: i64,
+    pub host_type: Option<i32>,
+}
+
+fn default_page() -> i64 { 1 }
+fn default_page_size() -> i64 { 20 }
+
+fn can_submit(host_type: i32, hidden: bool, archive_at: Option<chrono::DateTime<Utc>>) -> bool {
+    if hidden { return false; }
+    match host_type {
+        0 => true,
+        1 => archive_at.map_or(true, |t| t > Utc::now()),
+        _ => false,
+    }
+}
+
+pub fn router() -> Router<Arc<AppState>> {
+    Router::new().route("/", get(list_games))
+}
+
+async fn list_games(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<GameListQuery>,
+) -> Result<impl IntoResponse> {
+    let page = q.page.max(1);
+    let page_size = q.page_size.clamp(1, 100);
+    let offset = (page - 1) * page_size;
+
+    let (rows, total) = match q.host_type {
+        Some(ht) => {
+            let rows = sqlx::query_as::<_, GameRow>(
+                r#"SELECT id, name, brief, host_type, start_at, end_at, archive_at, hidden, admins
+                   FROM game WHERE hidden = false AND host_type = $1
+                   ORDER BY start_at DESC LIMIT $2 OFFSET $3"#,
+            )
+            .bind(ht)
+            .bind(page_size)
+            .bind(offset)
+            .fetch_all(&state.r2s_db)
+            .await
+            .map_err(anyhow::Error::from)?;
+
+            let total: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM game WHERE hidden = false AND host_type = $1",
+            )
+            .bind(ht)
+            .fetch_one(&state.r2s_db)
+            .await
+            .map_err(anyhow::Error::from)?;
+
+            (rows, total)
+        }
+        None => {
+            let rows = sqlx::query_as::<_, GameRow>(
+                r#"SELECT id, name, brief, host_type, start_at, end_at, archive_at, hidden, admins
+                   FROM game WHERE hidden = false
+                   ORDER BY start_at DESC LIMIT $1 OFFSET $2"#,
+            )
+            .bind(page_size)
+            .bind(offset)
+            .fetch_all(&state.r2s_db)
+            .await
+            .map_err(anyhow::Error::from)?;
+
+            let total: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM game WHERE hidden = false",
+            )
+            .fetch_one(&state.r2s_db)
+            .await
+            .map_err(anyhow::Error::from)?;
+
+            (rows, total)
+        }
+    };
+
+    let items: Vec<GameItem> = rows
+        .into_iter()
+        .map(|r| {
+            let admins: Vec<i64> = r.admins
+                .as_array()
+                .map(|arr| arr.iter().filter_map(|v| v.as_i64()).collect())
+                .unwrap_or_default();
+            GameItem {
+                id: r.id,
+                name: r.name,
+                brief: r.brief,
+                host_type: r.host_type,
+                start_at: r.start_at,
+                end_at: r.end_at,
+                archive_at: r.archive_at,
+                can_submit: can_submit(r.host_type, r.hidden, r.archive_at),
+                admins,
+            }
+        })
+        .collect();
+
+    Ok(Json(serde_json::json!({ "items": items, "total": total })))
+}

@@ -1,0 +1,33 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[auth]
+# Must match ret2shell's auth.signing_key exactly (HS256 JWT secret)
+signing_key = "change-me-to-ret2shell-signing-key"
+
+[database]
+# This platform's own PostgreSQL (stores writeup metadata)
+host = "postgres"
+port = 5432
+db = "writeup"
+user = "writeup"
+password = "change-me"
+ssl_mode = "disable"
+
+[r2s_database]
+# ret2shell PostgreSQL — read-only (games, teams, users)
+host = "127.0.0.1"
+port = 5432
+db = "ret2shell"
+user = "ret2shell"
+password = "change-me"
+ssl_mode = "disable"
+
+[r2s_api]
+# ret2shell HTTP API base URL (for proxying captcha/login)
+base_url = "http://127.0.0.1:8000"
+
+[storage]
+path = "/var/lib/writeup-platform/storage"
+max_file_size = 52428800  # 50 MiB
