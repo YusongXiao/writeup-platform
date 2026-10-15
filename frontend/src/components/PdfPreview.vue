@@ -4,9 +4,15 @@ import { getDocument, GlobalWorkerOptions, type PDFDocumentLoadingTask } from 'p
 import { EventBus, PDFLinkService, PDFViewer } from 'pdfjs-dist/web/pdf_viewer.mjs'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import 'pdfjs-dist/web/pdf_viewer.css'
-import { getUserWriteupFile } from '@/api/writeup'
+import { getMyWriteupFile, getUserWriteupFile } from '@/api/writeup'
 
-const props = defineProps<{ gameId: number; writeupId: number; fileName: string; owner: string }>()
+const props = withDefaults(defineProps<{
+  gameId: number
+  writeupId: number
+  fileName: string
+  owner: string
+  source?: 'admin' | 'mine'
+}>(), { source: 'admin' })
 defineEmits<{ retry: [] }>()
 const container = ref<HTMLDivElement>()
 const viewerElement = ref<HTMLDivElement>()
@@ -66,7 +72,9 @@ onMounted(async () => {
   resizeObserver.observe(container.value!)
 
   try {
-    const data = await getUserWriteupFile(props.gameId, props.writeupId, controller.signal)
+    const data = await (props.source === 'mine'
+      ? getMyWriteupFile(props.gameId, controller.signal)
+      : getUserWriteupFile(props.gameId, props.writeupId, controller.signal))
     if (controller.signal.aborted) return
     const assets = `${import.meta.env.BASE_URL}pdfjs/`
     loadingTask = getDocument({
@@ -89,7 +97,7 @@ onMounted(async () => {
   } catch (e: any) {
     if (controller.signal.aborted) return
     if (!error.value) {
-      error.value = e.response?.status === 403 ? '没有权限预览此比赛的 Writeup'
+      error.value = e.response?.status === 403 ? '没有权限预览此 Writeup'
         : e.response?.status === 401 ? '登录已过期，请重新登录'
         : e.response?.status === 404 ? '文件不存在或已被删除'
         : 'PDF 加载失败或文件已损坏，请重试或下载原文件阅读'
@@ -148,17 +156,17 @@ onBeforeUnmount(() => {
 .toolbar-controls { display: flex; align-items: center; justify-content: center; gap: 24px; }
 .toolbar-group { display: flex; align-items: center; gap: 6px; }
 .pdf-toolbar button { height: 30px; min-width: 30px; padding: 0 8px; border-radius: var(--radius-sm); color: var(--text-primary); font-size: 20px; }
-.pdf-toolbar button:hover:not(:disabled) { background: var(--accent-muted); color: var(--accent); }
+.pdf-toolbar button:hover:not(:disabled) { background: var(--overlay); }
 .pdf-toolbar button:disabled { opacity: 0.35; cursor: not-allowed; }
 .pdf-toolbar .fit-button { font-size: 12px; }
-.pdf-toolbar input { width: 52px; height: 28px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-elevated); color: var(--text-primary); text-align: center; font-size: 12px; }
+.pdf-toolbar input { width: 52px; height: 28px; border: 1px solid transparent; border-radius: var(--radius-sm); background: var(--overlay); color: var(--text-primary); text-align: center; font-size: 12px; }
 .pdf-toolbar input::-webkit-inner-spin-button { appearance: none; }
 .zoom-value { min-width: 40px; text-align: center; }
 .pdf-body { position: relative; flex: 1; min-height: 0; }
 .pdf-container { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; }
 .pdfViewer { padding: 16px 0; }
 .pdf-state { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; background: var(--bg-sunken); color: var(--text-secondary); text-align: center; font-size: 14px; }
-.retry-button { padding: 8px 16px; color: var(--accent); background: var(--accent-muted); border-radius: var(--radius-sm); }
+.retry-button { padding: 8px 16px; color: var(--text-primary); background: var(--overlay); border-radius: var(--radius-sm); }
 .spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
 @container (max-width: 600px) {
   .pdf-toolbar { grid-template-columns: minmax(0, 1fr) auto; padding: 8px 12px; }

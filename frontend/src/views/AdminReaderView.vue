@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { downloadUserWriteup, getGameWriteups, type WriteupRecord } from '@/api/writeup'
 import PdfPreview from '@/components/PdfPreview.vue'
+import UiIcon from '@/components/UiIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -81,7 +82,7 @@ watch(() => selected.value?.id, async () => {
 <template>
   <div class="reader-view">
     <header class="reader-header">
-      <RouterLink class="back-link" :to="{ name: 'admin', params: { gameId } }">
+      <RouterLink class="back-link btn btn-ghost btn-sm" :to="{ name: 'admin', params: { gameId } }">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
         返回管理
       </RouterLink>
@@ -102,7 +103,7 @@ watch(() => selected.value?.id, async () => {
       <aside class="submission-sidebar" aria-label="Writeup 提交列表">
         <div class="sidebar-header">
           <h2>提交列表 <span>{{ items.length }}</span></h2>
-          <input v-model="search" type="search" placeholder="搜索用户名 / 队伍名" aria-label="搜索用户名或队伍名" />
+          <div class="search-field"><UiIcon name="search" :size="16" /><input v-model="search" type="search" placeholder="搜索用户名 / 队伍名" aria-label="搜索用户名或队伍名" /></div>
         </div>
         <div class="submission-list">
           <div v-for="w in filteredItems" :key="w.id" class="writeup-card" :class="{ active: selected?.id === w.id }">
@@ -113,7 +114,7 @@ watch(() => selected.value?.id, async () => {
               <span class="submitted-at">提交时间：{{ formatDate(w.updated_at) }}</span>
               <span class="file-type">{{ w.file_type.toUpperCase() }}</span>
             </button>
-            <button class="download-icon" :disabled="downloading.includes(w.id)" :title="`下载 ${w.file_name}`" :aria-label="`下载 ${w.user_nickname || w.user_account} 的 Writeup`" @click="download(w)">
+            <button class="download-icon btn btn-ghost btn-sm btn-square" :disabled="downloading.includes(w.id)" :title="`下载 ${w.file_name}`" :aria-label="`下载 ${w.user_nickname || w.user_account} 的 Writeup`" @click="download(w)">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M12 3v12m-5-5 5 5 5-5"/>
               </svg>
@@ -144,9 +145,9 @@ watch(() => selected.value?.id, async () => {
 
 <style scoped>
 .reader-view { height: calc(100dvh - var(--nav-height)); min-height: 400px; display: flex; flex-direction: column; }
-.reader-header { display: flex; align-items: center; gap: 24px; padding: 4px 24px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.reader-header { display: flex; align-items: center; gap: 24px; padding: 4px 16px; border-bottom: 1px solid var(--border); background: var(--surface); backdrop-filter: blur(8px); }
 .back-link { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: 14px; color: var(--text-secondary); }
-.back-link:hover { color: var(--accent); }
+.back-link:hover { color: var(--text-primary); }
 .reader-title { min-width: 0; }
 .reader-title h1 { font-size: 16px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reader-title > span { display: block; font-size: 12px; line-height: 16px; color: var(--text-secondary); }
@@ -155,10 +156,12 @@ watch(() => selected.value?.id, async () => {
 .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
 .sidebar-header h2 { display: flex; align-items: center; justify-content: space-between; font-size: 14px; margin-bottom: 12px; }
 .sidebar-header h2 span { color: var(--text-secondary); font-weight: 400; }
-.sidebar-header input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text-primary); font-size: 13px; }
+.search-field { position: relative; width: 100%; }
+.search-field > svg { position: absolute; top: 11px; left: 10px; color: var(--text-tertiary); pointer-events: none; }
+.sidebar-header input { width: 100%; padding: 8px 10px 8px 34px; border: 1px solid transparent; border-radius: var(--radius-sm); background: var(--overlay); color: var(--text-primary); font-size: 12px; }
 .sidebar-header input:focus { outline: 2px solid var(--border-focus); outline-offset: 2px; }
 .submission-list { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; }
-.writeup-card { display: flex; align-items: center; margin-bottom: 8px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-elevated); overflow: hidden; }
+.writeup-card { display: flex; align-items: center; margin-bottom: 8px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--overlay); overflow: hidden; }
 .writeup-card:hover { border-color: var(--border-strong); }
 .writeup-card.active { border-color: var(--accent); background: var(--accent-muted); }
 .submission-select { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: flex-start; gap: 3px; padding: 14px 4px 14px 14px; color: var(--text-primary); text-align: left; }
@@ -168,7 +171,7 @@ watch(() => selected.value?.id, async () => {
 .team { font-size: 13px; margin-top: 4px; }
 .submission-select .file-type { margin-top: 5px; padding: 1px 6px; border-radius: 4px; color: var(--accent); background: var(--accent-muted); font-size: 10px; font-weight: 600; }
 .download-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 34px; height: 34px; margin: 8px; border-radius: var(--radius-sm); color: var(--text-secondary); }
-.download-icon:hover { color: var(--accent); background: var(--accent-muted); }
+.download-icon:hover { color: var(--text-primary); }
 button:disabled { opacity: 0.5; cursor: wait; }
 button:focus-visible, a:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; }
 .preview-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--bg-sunken); }
@@ -176,7 +179,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--border-focus); 
 .document-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .document-team { flex-shrink: 0; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); }
 .reader-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 32px; text-align: center; font-size: 14px; color: var(--text-secondary); }
-.text-button { padding: 8px 14px; border-radius: var(--radius-sm); color: var(--accent); background: var(--accent-muted); }
+.text-button { padding: 8px 14px; border-radius: var(--radius-sm); color: var(--text-primary); background: var(--overlay); }
 .download-error { padding: 12px 16px; font-size: 12px; color: var(--danger); border-top: 1px solid var(--border); }
 .no-results { padding: 24px 8px; text-align: center; color: var(--text-secondary); font-size: 13px; }
 @media (max-width: 800px) {

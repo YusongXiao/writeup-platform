@@ -1,58 +1,39 @@
 <script setup lang="ts">
-import { useThemeStore, THEMES } from '@/stores/theme'
-import type { ThemeId } from '@/stores/theme'
+import { ref } from 'vue'
+import { useThemeStore, type ThemePreference } from '@/stores/theme'
+import UiIcon from './UiIcon.vue'
 
 const theme = useThemeStore()
+const popover = ref<HTMLDetailsElement>()
+const options = [
+  { value: 'light', label: '浅色', icon: 'sun' },
+  { value: 'dark', label: '深色', icon: 'moon' },
+  { value: 'system', label: '跟随系统', icon: 'monitor' },
+] as const
+
+function select(value: ThemePreference) {
+  theme.set(value)
+  if (popover.value) popover.value.open = false
+}
 </script>
 
 <template>
-  <div class="theme-switcher">
-    <button
-      v-for="t in THEMES"
-      :key="t.id"
-      class="theme-btn"
-      :class="{ active: theme.current === t.id }"
-      :title="t.label"
-      @click="theme.set(t.id as ThemeId)"
-    >
-      <span class="icon">{{ t.icon }}</span>
-    </button>
-  </div>
+  <details ref="popover" class="theme-switcher" @keydown.esc="popover && (popover.open = false)">
+    <summary class="btn btn-ghost btn-square" title="外观设置" aria-label="外观设置"><UiIcon :name="theme.isDark ? 'moon' : 'sun'" /></summary>
+    <div class="theme-menu panel" role="group" aria-label="外观模式">
+      <button v-for="option in options" :key="option.value" class="btn btn-ghost btn-sm theme-option" :class="{ active: theme.preference === option.value }" :aria-pressed="theme.preference === option.value" @click="select(option.value)">
+        <UiIcon :name="option.icon" :size="18" /><span>{{ option.label }}</span><UiIcon v-if="theme.preference === option.value" name="check" :size="16" />
+      </button>
+    </div>
+  </details>
 </template>
 
 <style scoped>
-.theme-switcher {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: var(--overlay);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-}
-
-.theme-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-pill);
-  font-family: var(--font-sans);
-  color: var(--text-secondary);
-  background: transparent;
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.theme-btn:hover {
-  color: var(--text-primary);
-  background: var(--surface-hover);
-}
-
-.theme-btn.active {
-  color: var(--text-on-accent);
-  background: var(--accent);
-  box-shadow: var(--shadow-sm);
-}
-
-.icon { font-size: 15px; line-height: 1; }
+.theme-switcher { position: relative; }
+summary { list-style: none; }
+summary::-webkit-details-marker { display: none; }
+.theme-menu { position: absolute; top: calc(100% + 10px); right: 0; z-index: 110; width: 176px; padding: 8px; background: var(--bg-elevated); }
+.theme-option { width: 100%; justify-content: flex-start; margin: 2px 0; font-weight: 400; }
+.theme-option > span { flex: 1; text-align: left; }
+.theme-option.active { background: var(--overlay); }
 </style>

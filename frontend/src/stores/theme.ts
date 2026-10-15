@@ -1,45 +1,36 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { computed, onScopeDispose, ref, watchEffect } from 'vue'
 
-export type ThemeId = 'apple-light' | 'apple-dark' | 'cyberpunk' | 'frutiger-aero'
+export type ThemePreference = 'light' | 'dark' | 'system'
 
-export interface ThemeMeta {
-  id: ThemeId
-  label: string
-  icon: string
-}
-
-export const THEMES: ThemeMeta[] = [
-  { id: 'apple-light',    label: 'Apple Light',    icon: '☀️' },
-  { id: 'apple-dark',     label: 'Apple Dark',     icon: '🌙' },
-  { id: 'cyberpunk',      label: 'Cyberpunk',      icon: '⚡' },
-  { id: 'frutiger-aero',  label: 'Frutiger Aero',  icon: '🌊' },
-]
-
-function systemDefault(): ThemeId {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'apple-dark'
-    : 'apple-light'
+function savedPreference(): ThemePreference {
+  const saved = localStorage.getItem('theme')
+  if (saved === 'light' || saved === 'dark' || saved === 'system') return saved
+  if (saved === 'apple-dark' || saved === 'cyberpunk' || saved === 'cyber-dark') return 'dark'
+  if (saved === 'apple-light' || saved === 'frutiger-aero' || saved === 'cyber-light') return 'light'
+  return 'system'
 }
 
 export const useThemeStore = defineStore('theme', () => {
-  const saved = localStorage.getItem('theme') as ThemeId | null
-  const current = ref<ThemeId>(saved ?? systemDefault())
+  const preference = ref<ThemePreference>(savedPreference())
+  const media = window.matchMedia('(prefers-color-scheme: dark)')
+  const systemDark = ref(media.matches)
+  const isDark = computed(() => preference.value === 'dark' || (preference.value === 'system' && systemDark.value))
+  const current = computed(() => isDark.value ? 'cyber-dark' : 'cyber-light')
 
-  function apply(id: ThemeId) {
-    document.documentElement.setAttribute('data-theme', id)
+  function onSystemChange(event: MediaQueryListEvent) { systemDark.value = event.matches }
+  media.addEventListener('change', onSystemChange)
+  onScopeDispose(() => media.removeEventListener('change', onSystemChange))
+
+  function set(value: ThemePreference) {
+    preference.value = value
+    localStorage.setItem('theme', value)
   }
 
-  function set(id: ThemeId) {
-    current.value = id
-    localStorage.setItem('theme', id)
-    apply(id)
-  }
+  watchEffect(() => {
+    document.documentElement.dataset.theme = current.value
+    document.documentElement.dataset.style = isDark.value ? 'dark' : 'light'
+  })
 
-  // Apply on init
-  apply(current.value)
-
-  watch(current, apply)
-
-  return { current, set, themes: THEMES }
+  return { current, preference, isDark, set }
 })

@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { ref, watch } from 'vue'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
+import AppBackground from '@/components/AppBackground.vue'
+import UiIcon from '@/components/UiIcon.vue'
+import logoUrl from '@/assets/ret2shell.svg'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
+const menuOpen = ref(false)
+watch(() => route.fullPath, () => { menuOpen.value = false })
 
 function logout() {
   auth.clearToken()
@@ -15,166 +21,61 @@ function logout() {
 
 <template>
   <div id="app-root">
-    <nav class="navbar">
+    <AppBackground />
+    <header class="navbar">
       <div class="nav-inner">
-        <RouterLink to="/" class="nav-brand">
-          <span class="brand-icon">⚑</span>
-          <span class="brand-text">Writeup</span>
+        <button class="btn btn-ghost btn-square mobile-menu-button" :aria-expanded="menuOpen" aria-controls="main-navigation" aria-label="切换导航菜单" @click="menuOpen = !menuOpen"><UiIcon :name="menuOpen ? 'close' : 'menu'" /></button>
+        <RouterLink to="/" class="nav-brand btn btn-ghost">
+          <img :src="logoUrl" width="28" height="28" alt="ret2shell" />
+          <span>Writeup</span>
         </RouterLink>
-
-        <div class="nav-center"></div>
-
+        <nav id="main-navigation" class="nav-links" :class="{ open: menuOpen }" aria-label="主导航">
+          <RouterLink :to="{ name: 'home', query: { type: 'training' } }" class="btn btn-ghost nav-link" :class="{ active: route.name === 'home' && route.query.type !== 'competition' }"><UiIcon name="training" /><span>训练场</span></RouterLink>
+          <RouterLink :to="{ name: 'home', query: { type: 'competition' } }" class="btn btn-ghost nav-link" :class="{ active: route.name === 'home' && route.query.type === 'competition' }"><UiIcon name="flag" /><span>赛事</span></RouterLink>
+          <RouterLink v-if="auth.isLoggedIn" to="/my" class="btn btn-ghost nav-link" :class="{ active: route.name === 'my' || route.name === 'my-reader' }"><UiIcon name="file" /><span>我的提交</span></RouterLink>
+        </nav>
         <div class="nav-right">
           <ThemeSwitcher />
           <template v-if="auth.isLoggedIn">
-            <RouterLink to="/my" class="nav-link">我的提交</RouterLink>
-            <span class="nav-user">{{ auth.payload?.nickname }}</span>
-            <button class="nav-logout" @click="logout">退出</button>
+            <span class="nav-divider" aria-hidden="true"></span>
+            <span class="nav-user" :title="auth.payload?.nickname || auth.payload?.account"><UiIcon name="user" /><span>{{ auth.payload?.nickname || auth.payload?.account }}</span></span>
+            <button class="btn btn-ghost btn-square logout-button" title="退出登录" aria-label="退出登录" @click="logout"><UiIcon name="logout" /></button>
           </template>
-          <template v-else>
-            <RouterLink to="/login" class="nav-btn">登录</RouterLink>
-          </template>
+          <RouterLink v-else to="/login" class="btn btn-primary btn-sm login-link"><UiIcon name="user" :size="18" />登录</RouterLink>
         </div>
       </div>
-    </nav>
-
-    <main class="main-content">
-      <RouterView />
-    </main>
+    </header>
+    <main class="main-content"><RouterView /></main>
   </div>
 </template>
 
 <style scoped>
-#app-root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+#app-root { display: flex; flex-direction: column; min-height: 100vh; }
+.navbar { position: sticky; top: 0; z-index: 100; height: var(--nav-height); flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface); backdrop-filter: blur(8px); }
+.nav-inner { height: 100%; display: flex; align-items: center; gap: 12px; padding: 0 12px; background: var(--overlay); }
+.nav-brand { gap: 12px; padding: 0 12px; font-size: 16px; font-weight: 400; }
+.nav-links { display: flex; align-items: center; gap: 4px; }
+.nav-link { font-weight: 400; }
+.nav-link.active { background: var(--overlay); }
+.nav-right { display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
+.nav-divider { height: 24px; width: 1px; background: var(--border); margin: 0 4px; }
+.nav-user { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; }
+.nav-user > span { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logout-button { color: var(--text-secondary); }
+.logout-button:hover { color: var(--danger); }
+.mobile-menu-button { display: none; }
+.main-content { flex: 1; min-width: 0; }
+@media (max-width: 760px) {
+  .nav-inner { gap: 4px; padding: 0 8px; }
+  .nav-brand { padding: 0 8px; gap: 8px; }
+  .mobile-menu-button { display: inline-flex; }
+  .nav-links { display: none; position: absolute; top: calc(var(--nav-height) + 8px); left: 8px; min-width: 210px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-elevated); }
+  .nav-links.open { display: flex; flex-direction: column; align-items: stretch; }
+  .nav-link { justify-content: flex-start; min-height: 40px; }
+  .nav-user > span { max-width: 80px; }
 }
-
-.navbar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  height: var(--nav-height);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-.nav-inner {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 0 24px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-
-.brand-icon {
-  font-size: 20px;
-  line-height: 1;
-}
-
-.brand-text {
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-}
-
-.nav-center {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.nav-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.nav-link {
-  font-size: 14px;
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition: color var(--duration-fast);
-}
-
-.nav-link:hover { color: var(--text-primary); }
-
-.nav-user {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  max-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.nav-logout {
-  font-size: 13px;
-  color: var(--text-tertiary);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  transition: all var(--duration-fast);
-}
-
-.nav-logout:hover {
-  color: var(--danger);
-  background: var(--danger-muted);
-}
-
-.nav-btn {
-  padding: 7px 18px;
-  background: var(--accent);
-  color: var(--text-on-accent);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.nav-btn:hover {
-  background: var(--accent-hover);
-  box-shadow: 0 4px 12px var(--accent-glow);
-}
-
-.main-content { flex: 1; }
-
-/* Cyberpunk navbar */
-[data-theme="cyberpunk"] .navbar {
-  border-bottom: 1px solid var(--accent);
-  box-shadow: 0 1px 20px var(--accent-glow);
-}
-
-[data-theme="cyberpunk"] .brand-text {
-  text-shadow: 0 0 10px var(--accent-glow);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-/* Frutiger Aero navbar */
-[data-theme="frutiger-aero"] .navbar {
-  background: var(--glass-bg);
-  box-shadow: var(--shadow-md);
+@media (max-width: 400px) {
+  .nav-user { display: none; }
+  .nav-divider { margin: 0; }
 }
 </style>

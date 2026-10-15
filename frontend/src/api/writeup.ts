@@ -66,6 +66,13 @@ export function downloadMyWriteup(gameId: number): Promise<void> {
   return fetchAndDownload(`/api/writeup/${gameId}/file`)
 }
 
+export function getMyWriteupFile(gameId: number, signal?: AbortSignal): Promise<ArrayBuffer> {
+  return api.get(`/writeup/${gameId}/file`, {
+    responseType: 'arraybuffer',
+    signal,
+  }).then(r => r.data)
+}
+
 export function getGameWriteups(gameId: number, params?: { page?: number; page_size?: number }): Promise<WriteupListResponse> {
   return api.get(`/admin/game/${gameId}/writeup`, { params }).then(r => r.data)
 }
