@@ -19,6 +19,7 @@ impl FileType {
         }
     }
 
+    #[allow(dead_code)]
     pub fn mime(&self) -> &'static str {
         match self {
             FileType::Pdf => "application/pdf",
@@ -77,6 +78,7 @@ pub async fn delete_file(path: &Path) -> Result<()> {
 }
 
 /// Build the storage path for a writeup file.
+#[allow(dead_code)]
 pub fn storage_path(root: &str, game_id: i64, user_id: i64, id: &str, ext: &str) -> PathBuf {
     PathBuf::from(root)
         .join(game_id.to_string())

@@ -38,6 +38,7 @@ pub fn router() -> Router<Arc<AppState>> {
 
 #[derive(sqlx::FromRow)]
 struct GameSubmitRow {
+    #[allow(dead_code)]
     id: i64,
     name: String,
     host_type: i32,

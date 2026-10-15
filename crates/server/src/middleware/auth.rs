@@ -75,6 +75,7 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct OptionalToken(pub Option<Token>);
 
 #[derive(Debug, Clone)]

@@ -6,7 +6,7 @@ use axum::{
     routing::post,
     Json,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::sync::Arc;
 
 use crate::{
@@ -32,14 +32,6 @@ struct R2sUser {
     permissions: serde_json::Value,
 }
 
-#[derive(Serialize, Deserialize)]
-struct JwtClaims {
-    id: i64,
-    account: String,
-    nickname: String,
-    permissions: Vec<i32>,
-    exp: i64,
-}
 
 async fn code_login(
     State(state): State<Arc<AppState>>,
