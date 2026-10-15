@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import { getGames, type GameItem } from '@/api/game'
 import { getGameWriteups, downloadGameWriteups, downloadUserWriteup, deleteUserWriteup, type WriteupRecord } from '@/api/writeup'
 
 const route = useRoute()
 const router = useRouter()
-const auth = useAuthStore()
 const gameId = Number(route.params.gameId)
 
 const game = ref<GameItem | null>(null)
@@ -86,14 +84,22 @@ onMounted(load)
             <h1 class="page-title">{{ game?.name ?? '赛事管理' }}</h1>
             <p class="page-sub">共 {{ total }} 份 Writeup</p>
           </div>
-          <button class="dl-all-btn" @click="downloadGameWriteups(gameId)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            批量下载 ZIP
-          </button>
+          <div class="header-actions">
+            <button class="dl-all-btn read-all-btn" @click="router.push({ name: 'admin-reader', params: { gameId } })">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M12 7v14M3 3h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5v16h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z"/>
+              </svg>
+              批量阅读
+            </button>
+            <button class="dl-all-btn" @click="downloadGameWriteups(gameId)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              批量下载 ZIP
+            </button>
+          </div>
         </div>
 
         <div v-if="items.length === 0" class="state-msg empty">暂无提交</div>
@@ -124,6 +130,7 @@ onMounted(load)
                 <td class="date">{{ formatDate(w.updated_at) }}</td>
                 <td>
                   <div class="action-btns">
+                    <button class="dl-btn" @click="router.push({ name: 'admin-reader', params: { gameId }, query: { writeup: w.id } })">预览</button>
                     <button class="dl-btn" @click="downloadUserWriteup(gameId, w.id)">下载</button>
                     <button class="del-btn" :disabled="deleting === w.id" @click="handleDelete(w)">删除</button>
                   </div>
@@ -187,6 +194,10 @@ onMounted(load)
 }
 
 .page-sub { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.read-all-btn { background: var(--accent-muted); color: var(--accent); }
+.read-all-btn:hover { color: var(--text-on-accent); }
 
 .dl-all-btn {
   display: flex;
@@ -331,6 +342,7 @@ onMounted(load)
 .action-btns {
   display: flex;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .del-btn {

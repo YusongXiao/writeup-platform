@@ -9,6 +9,7 @@ const router = createRouter({
     { path: '/submit/:gameId', name: 'submit', component: () => import('@/views/SubmitView.vue'), meta: { requiresAuth: true } },
     { path: '/my',        name: 'my',     component: () => import('@/views/MyView.vue'),    meta: { requiresAuth: true } },
     { path: '/admin/:gameId', name: 'admin', component: () => import('@/views/AdminView.vue'), meta: { requiresAuth: true } },
+    { path: '/admin/:gameId/read', name: 'admin-reader', component: () => import('@/views/AdminReaderView.vue'), meta: { requiresAuth: true } },
   ],
 })
 

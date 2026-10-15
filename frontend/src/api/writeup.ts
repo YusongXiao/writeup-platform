@@ -78,6 +78,13 @@ export function downloadUserWriteup(gameId: number, writeupId: number): Promise<
   return fetchAndDownload(`/api/admin/game/${gameId}/writeup/${writeupId}/file`)
 }
 
+export function getUserWriteupFile(gameId: number, writeupId: number, signal?: AbortSignal): Promise<ArrayBuffer> {
+  return api.get(`/admin/game/${gameId}/writeup/${writeupId}/file`, {
+    responseType: 'arraybuffer',
+    signal,
+  }).then(r => r.data)
+}
+
 export function deleteUserWriteup(gameId: number, writeupId: number): Promise<void> {
   return api.delete(`/admin/game/${gameId}/writeup/${writeupId}`).then(() => undefined)
 }
