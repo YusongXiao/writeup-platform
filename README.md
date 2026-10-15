@@ -57,9 +57,7 @@ Browser ──▶ nginx ──▶ /api ──▶ Rust server ──▶ PostgreSQ
 
 The server connects to **two** databases: its own (writeup metadata, migrations
 run automatically on startup) and the ret2shell database **read-only** (used to
-list games, resolve teams, and check game admins). Authentication is delegated
-to the ret2shell API, and the resulting JWT is trusted by both services because
-they share the same signing key.
+list games, resolve teams, and check game admins). 
 
 ## Quick start (Docker Compose)
 
@@ -94,7 +92,7 @@ they share the same signing key.
 | Section        | Key              | Notes                                                    |
 | -------------- | ---------------- | -------------------------------------------------------- |
 | `server`       | `host`, `port`   | HTTP bind address (default `0.0.0.0:8080`)               |
-| `auth`         | `signing_key`    | HS256 JWT secret — **must match ret2shell**              |
+| `auth`         | `signing_key`    | HS256 JWT secret — **no need match ret2shell**              |
 | `database`     | `host`…          | This platform's own PostgreSQL                            |
 | `r2s_database` | `host`…          | ret2shell PostgreSQL (**read-only**); games/teams/users  |
 | `r2s_api`      | `base_url`       | ret2shell HTTP API (captcha login proxy)                 |
@@ -110,8 +108,6 @@ cp config/config.toml.example config/config.toml   # adjust hosts to your local 
 CONFIG_PATH=./config/config.toml cargo run -p server
 ```
 
-SQLx metadata is committed under `.sqlx/`, so the server compiles with
-`SQLX_OFFLINE=true` without a live database.
 
 **Frontend:**
 
@@ -125,9 +121,6 @@ The SPA calls the API under `/api`, so in development point it at a running
 backend (add a Vite `server.proxy` entry for `/api`) and set `VITE_R2S_BASE`
 if needed.
 
-UI translations live in `frontend/src/i18n/`. Keep all four JSON dictionaries'
-keys and `{{ name }}` placeholders in sync. The language menu saves the selection
-and reloads the page, following ret2shell's behavior.
 
 ## API overview
 
@@ -149,14 +142,9 @@ Authentication uses a `Authorization: Bearer <jwt>` header. A valid token must
 carry permission `0` (activated account); game-admin operations additionally
 require permission `5` **and** the user's id in the game's `admins` list.
 
-Single-writeup admin routes accept the writeup's `id` from the list response;
-they do not accept user ids. Hidden game details are available only to that game's admins.
 
 ## Security notes
 
-- `config/config.toml` holds database passwords and the ret2shell signing key.
-  It is **gitignored** — commit `config/config.toml.example` instead and never
-  leak production secrets.
 - Uploaded filenames are sanitized and storage paths are constructed from
   server-generated ids, not user input.
 

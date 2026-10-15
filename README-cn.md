@@ -53,9 +53,7 @@ docx）。赛事管理员可以查看、批量下载和管理提交。
                                     └──▶ ret2shell HTTP API          : 验证码 / 登录
 ```
 
-服务连接 **两个**数据库：自有库（存放 writeup 元数据，启动时自动执行迁移）和
-ret2shell 数据库（**只读**，用于查询比赛列表、解析队伍、判断比赛管理员）。鉴权
-委托给 ret2shell API，产出的 JWT 被双方信任，因为二者共享同一个签名密钥。
+服务连接 **两个**数据库：自有库（存放 writeup 元数据，启动时自动执行迁移）和 ret2shell 数据库（**只读**，用于查询比赛列表、解析队伍、判断比赛管理员）。
 
 ## 快速开始（Docker Compose）
 
@@ -90,7 +88,7 @@ ret2shell 数据库（**只读**，用于查询比赛列表、解析队伍、判
 | 配置段         | 键              | 说明                                                     |
 | -------------- | --------------- | -------------------------------------------------------- |
 | `server`       | `host`、`port`  | HTTP 监听地址（默认 `0.0.0.0:8080`）                     |
-| `auth`         | `signing_key`   | HS256 JWT 密钥 —— **必须与 ret2shell 一致**              |
+| `auth`         | `signing_key`   | HS256 JWT 密钥 —— **无需与 ret2shell 一致**              |
 | `database`     | `host`…         | 本平台自有的 PostgreSQL                                   |
 | `r2s_database` | `host`…         | ret2shell 的 PostgreSQL（**只读**）：比赛/队伍/用户       |
 | `r2s_api`      | `base_url`      | ret2shell HTTP API（验证码登录代理）                     |
@@ -106,8 +104,6 @@ cp config/config.toml.example config/config.toml   # 按本地环境调整 host
 CONFIG_PATH=./config/config.toml cargo run -p server
 ```
 
-SQLx 元数据已提交在 `.sqlx/` 下，因此设置 `SQLX_OFFLINE=true` 即可在没有实时
-数据库的情况下编译。
 
 **前端：**
 
@@ -120,8 +116,6 @@ npm run dev
 前端通过 `/api` 调用后端，因此开发时需把它指向运行中的后端（在 Vite 中为
 `/api` 添加 `server.proxy` 配置），如有需要再设置 `VITE_R2S_BASE`。
 
-界面翻译位于 `frontend/src/i18n/`，四套 JSON 词典的键和 `{{ name }}` 占位符需保持一致。
-语言菜单会保存选择并刷新页面，与 ret2shell 的行为一致。
 
 ## API 一览
 
@@ -143,13 +137,9 @@ npm run dev
 （账号已激活）；比赛管理员操作还额外要求权限位 `5`，**且**用户 id 在该比赛的
 `admins` 列表中。
 
-管理员下载、删除单份 Writeup 时，应使用列表返回的 Writeup `id`，不接受用户 id。
-隐藏赛事的详情仅对本场赛事管理员开放。
 
 ## 安全说明
 
-- `config/config.toml` 保存数据库密码和 ret2shell 签名密钥。该文件已被
-  **gitignore** —— 请改为提交 `config/config.toml.example`，切勿泄露生产密钥。
 - 上传的文件名会被清洗，存储路径由服务端生成的 id 拼接，而非用户输入。
 
 ## 相关项目
