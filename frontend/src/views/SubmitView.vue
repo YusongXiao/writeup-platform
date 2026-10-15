@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { getGames, type GameItem } from '@/api/game'
 import { submitWriteup, getMyWriteupForGame, type WriteupRecord } from '@/api/writeup'
 import FileUpload from '@/components/FileUpload.vue'
+import UiIcon from '@/components/UiIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -87,275 +88,58 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="submit-view">
+  <div class="submit-view page-shell">
     <div class="submit-container">
-      <button class="back-btn" @click="router.push('/')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-        返回
-      </button>
-
-      <div v-if="loading" class="state-msg">
-        <div class="spinner"></div> 加载中…
-      </div>
-
+      <button class="back-btn" @click="router.push('/')"><UiIcon name="arrowLeft" :size="16" />返回</button>
+      <div v-if="loading" class="state-msg" role="status"><div class="spinner"></div>加载中…</div>
       <template v-else-if="game">
-        <div class="page-header">
-          <span class="type-badge" :class="game.host_type === 0 ? 'training' : 'competition'">
-            {{ game.host_type === 0 ? '训练场' : '赛事' }}
-          </span>
-          <h1 class="page-title">{{ game.name }}</h1>
-          <p class="page-sub">提交你的 Writeup（PDF 或 docx，最大 50 MB）</p>
+        <div class="page-heading">
+          <div>
+            <h1 class="heading-title"><UiIcon name="upload" :size="26" />{{ game.name }}</h1>
+            <p class="heading-sub">提交你的 Writeup，记录解题过程与思路</p>
+          </div>
+          <span class="tag" :class="game.host_type === 0 ? 'tag-success' : 'tag-primary'">{{ game.host_type === 0 ? '训练场' : '赛事' }}</span>
         </div>
-
-        <div v-if="existing" class="existing-card">
-          <div class="existing-header">
-            <span class="existing-label">已提交</span>
-            <span class="existing-date">{{ formatDate(existing.updated_at) }}</span>
+        <section class="panel">
+          <div class="panel-body submission-body">
+            <div class="section-heading"><UiIcon name="file" /><h2>解题报告</h2><span class="file-formats">PDF / DOCX · 最大 50 MB</span></div>
+            <div v-if="existing" class="existing-card">
+              <div class="existing-header"><span class="tag tag-success"><UiIcon name="check" :size="14" />已提交</span><span class="existing-date">{{ formatDate(existing.updated_at) }}</span></div>
+              <div class="existing-info"><UiIcon name="file" :size="18" /><span class="existing-name">{{ existing.file_name }}</span></div>
+              <p class="existing-hint">{{ formatSize(existing.file_size) }} · {{ existing.file_type.toUpperCase() }} · 重新上传将覆盖当前文件</p>
+            </div>
+            <div v-if="lockReason" class="status-message warning">{{ lockMessage(lockReason) }}</div>
+            <template v-else>
+              <FileUpload @file="selectedFile = $event" />
+              <div v-if="success" class="status-message success" role="status"><UiIcon name="check" :size="18" />提交成功！</div>
+              <div v-if="error" class="status-message error" role="alert">{{ error }}</div>
+              <div class="submit-footer"><span>请确认文件内容完整后提交</span><button class="btn btn-primary" :disabled="!selectedFile || submitting" @click="handleSubmit"><span v-if="submitting" class="btn-spinner"></span><UiIcon v-else name="upload" :size="18" />{{ submitting ? '提交中…' : (existing ? '更新 Writeup' : '提交 Writeup') }}</button></div>
+            </template>
           </div>
-          <div class="existing-info">
-            <span class="existing-name">{{ existing.file_name }}</span>
-            <span class="existing-size">{{ formatSize(existing.file_size) }}</span>
-            <span class="existing-type">{{ existing.file_type.toUpperCase() }}</span>
-          </div>
-          <p class="existing-hint">重新上传将覆盖当前文件</p>
-        </div>
-
-        <div v-if="lockReason" class="lock-card">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          <span>{{ lockMessage(lockReason) }}</span>
-        </div>
-
-        <template v-else>
-          <div class="upload-section">
-            <FileUpload @file="selectedFile = $event" />
-          </div>
-
-          <div v-if="success" class="success-msg">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            提交成功！
-          </div>
-
-          <div v-if="error" class="error-msg">{{ error }}</div>
-
-          <button
-            class="submit-btn"
-            :disabled="!selectedFile || submitting"
-            @click="handleSubmit"
-          >
-            <span v-if="submitting" class="btn-spinner"></span>
-            {{ submitting ? '提交中…' : (existing ? '更新 Writeup' : '提交 Writeup') }}
-          </button>
-        </template>
+        </section>
       </template>
-
-      <div v-else class="state-msg error">未找到该赛事</div>
+      <div v-else class="state-msg error" role="alert">{{ error || '未找到该赛事' }}</div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.submit-view {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 32px 24px 80px;
+.submit-container { max-width: 800px; margin: 0 auto; }
+.submission-body { display: flex; flex-direction: column; gap: 20px; }
+.section-heading { display: flex; align-items: center; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.section-heading h2 { font-size: 14px; }
+.file-formats { margin-left: auto; color: var(--text-tertiary); font-size: 11px; }
+.existing-card { padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--overlay); }
+.existing-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.existing-date, .existing-hint { color: var(--text-tertiary); font-size: 11px; }
+.existing-info { display: flex; align-items: center; gap: 8px; }
+.existing-name { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.existing-hint { margin-top: 6px; }
+.submit-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 4px; }
+.submit-footer > span { font-size: 11px; color: var(--text-tertiary); }
+@media (max-width: 580px) {
+  .section-heading { flex-wrap: wrap; }
+  .file-formats { width: 100%; margin: 0; }
+  .submit-footer { flex-direction: column; align-items: stretch; }
 }
-
-.submit-container {
-  max-width: 560px;
-  margin: 0 auto;
-}
-
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 6px 0;
-  margin-bottom: 24px;
-  font-family: var(--font-sans);
-  transition: color var(--duration-fast);
-}
-
-.back-btn:hover { color: var(--accent); }
-
-.page-header { margin-bottom: 28px; }
-
-.type-badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 10px;
-}
-
-.type-badge.training { background: var(--success-muted); color: var(--success); }
-.type-badge.competition { background: var(--accent-muted); color: var(--accent); }
-
-.page-title {
-  font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
-  margin-bottom: 6px;
-}
-
-.page-sub { font-size: 14px; color: var(--text-secondary); }
-
-.existing-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
-  margin-bottom: 20px;
-  backdrop-filter: blur(12px);
-}
-
-.existing-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.existing-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--success);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.existing-date { font-size: 12px; color: var(--text-tertiary); }
-
-.existing-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.existing-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.existing-size, .existing-type {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.existing-hint {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.lock-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 20px;
-  background: var(--warning-muted, rgba(255, 166, 0, 0.08));
-  border: 1px solid var(--warning, #ffa600);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  color: var(--warning, #ffa600);
-  margin-bottom: 16px;
-}
-
-.upload-section { margin-bottom: 16px; }
-
-.success-msg {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: var(--success-muted);
-  border: 1px solid var(--success);
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  color: var(--success);
-  margin-bottom: 12px;
-}
-
-.error-msg {
-  padding: 10px 14px;
-  background: var(--danger-muted);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  color: var(--danger);
-  margin-bottom: 12px;
-}
-
-.submit-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 13px;
-  background: var(--accent);
-  color: var(--text-on-accent);
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 15px;
-  font-weight: 600;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.submit-btn:hover:not(:disabled) {
-  background: var(--accent-hover);
-  box-shadow: 0 4px 16px var(--accent-glow);
-  transform: translateY(-1px);
-}
-
-.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-.state-msg {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 60px 0;
-  color: var(--text-secondary);
-  font-size: 15px;
-}
-
-.state-msg.error { color: var(--danger); }
-
-.spinner {
-  width: 20px; height: 20px;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-.btn-spinner {
-  width: 16px; height: 16px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
 </style>

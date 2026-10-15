@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import UiIcon from './UiIcon.vue'
 
 const emit = defineEmits<{
   (e: 'file', file: File): void
@@ -63,7 +64,7 @@ function clear() {
       <input
         type="file"
         :accept="ACCEPTED.join(',')"
-        class="hidden-input"
+        class="hidden-input" aria-label="选择 Writeup 文件"
         @change="onInput"
       />
 
@@ -81,15 +82,12 @@ function clear() {
 
       <template v-else>
         <div class="file-info">
-          <div class="file-icon">
-            <span v-if="selectedFile.name.endsWith('.pdf')">📄</span>
-            <span v-else>📝</span>
-          </div>
+          <div class="file-icon"><UiIcon name="file" :size="28" /></div>
           <div class="file-details">
             <span class="file-name">{{ selectedFile.name }}</span>
             <span class="file-size">{{ formatSize(selectedFile.size) }}</span>
           </div>
-          <button class="clear-btn" type="button" @click.prevent="clear" title="移除">
+          <button class="clear-btn btn btn-ghost btn-sm btn-square" type="button" @click.prevent="clear" title="移除" aria-label="移除所选文件">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
@@ -98,139 +96,27 @@ function clear() {
       </template>
     </label>
 
-    <p v-if="error" class="error-msg">{{ error }}</p>
+    <p v-if="error" class="status-message error" role="alert">{{ error }}</p>
   </div>
 </template>
 
 <style scoped>
 .file-upload { width: 100%; }
-
-.drop-zone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 32px 24px;
-  border: 2px dashed var(--border-strong);
-  border-radius: var(--radius-lg);
-  background: var(--overlay);
-  cursor: pointer;
-  transition: all var(--duration-base) var(--ease-out);
-  min-height: 140px;
-}
-
-.drop-zone:hover,
-.drop-zone.dragging {
-  border-color: var(--accent);
-  background: var(--accent-muted);
-}
-
-.drop-zone.has-file {
-  border-style: solid;
-  border-color: var(--success);
-  background: var(--success-muted);
-  padding: 20px 24px;
-  min-height: auto;
-}
-
-.hidden-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.upload-icon {
-  color: var(--text-tertiary);
-  transition: color var(--duration-fast);
-}
-
-.drop-zone:hover .upload-icon,
-.drop-zone.dragging .upload-icon {
-  color: var(--accent);
-}
-
-.upload-hint {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.link { color: var(--accent); font-weight: 500; }
-
-.upload-types {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.file-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.file-icon { font-size: 28px; flex-shrink: 0; }
-
-.file-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.file-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.file-size {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.clear-btn {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-pill);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  background: var(--overlay);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  transition: all var(--duration-fast);
-}
-
-.clear-btn:hover {
-  color: var(--danger);
-  border-color: var(--danger);
-  background: var(--danger-muted);
-}
-
-.error-msg {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--danger);
-  padding: 8px 12px;
-  background: var(--danger-muted);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--danger);
-}
-
-[data-theme="cyberpunk"] .drop-zone {
-  border-color: var(--border);
-}
-[data-theme="cyberpunk"] .drop-zone:hover,
-[data-theme="cyberpunk"] .drop-zone.dragging {
-  box-shadow: var(--neon-glow);
-}
+.drop-zone { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 200px; padding: 32px 20px; border: 1px dashed var(--border-strong); border-radius: var(--radius-md); background: var(--overlay); cursor: pointer; text-align: center; transition: border-color var(--duration-fast), background var(--duration-fast); }
+.drop-zone:hover, .drop-zone.dragging { border-color: var(--accent); background: var(--accent-muted); }
+.drop-zone:focus-within { outline: 2px solid var(--border-focus); outline-offset: 3px; }
+.drop-zone.has-file { border-style: solid; min-height: 100px; padding: 20px; text-align: left; }
+.hidden-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.upload-icon { color: var(--text-secondary); }
+.upload-hint { font-size: 13px; color: var(--text-secondary); }
+.link { color: var(--accent); }
+.upload-types { font-size: 11px; color: var(--text-tertiary); }
+.file-info { display: flex; align-items: center; gap: 12px; width: 100%; }
+.file-icon { display: flex; color: var(--text-secondary); }
+.file-details { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.file-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-size { font-size: 11px; color: var(--text-tertiary); }
+.clear-btn { color: var(--text-secondary); }
+.clear-btn:hover { color: var(--danger); }
+.status-message { margin-top: 12px; }
 </style>
