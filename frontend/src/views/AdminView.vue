@@ -51,7 +51,7 @@ async function handleDelete(w: WriteupRecord) {
   if (!confirm(`确认删除 ${w.team_name ?? w.user_account} 的 Writeup？此操作不可撤销。`)) return
   deleting.value = w.id
   try {
-    await deleteUserWriteup(gameId, w.user_id)
+    await deleteUserWriteup(gameId, w.id)
     items.value = items.value.filter(i => i.id !== w.id)
     total.value--
   } catch (e: any) {
@@ -124,7 +124,7 @@ onMounted(load)
                 <td class="date">{{ formatDate(w.updated_at) }}</td>
                 <td>
                   <div class="action-btns">
-                    <button class="dl-btn" @click="downloadUserWriteup(gameId, w.user_id)">下载</button>
+                    <button class="dl-btn" @click="downloadUserWriteup(gameId, w.id)">下载</button>
                     <button class="del-btn" :disabled="deleting === w.id" @click="handleDelete(w)">删除</button>
                   </div>
                 </td>

@@ -183,30 +183,57 @@ pub async fn find_by_id_and_game(
     Ok(row)
 }
 
+pub async fn find_by_user_or_teams(
+    pool: &PgPool,
+    user_id: i64,
+    team_ids: &[i64],
+    page: i64,
+    page_size: i64,
+) -> Result<(Vec<Writeup>, i64)> {
+    let offset = (page - 1) * page_size;
+    let (rows, total) = if team_ids.is_empty() {
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM writeup WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_one(pool)
+            .await?;
+        let rows = sqlx::query_as::<_, Writeup>(
+            "SELECT * FROM writeup WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3",
+        )
+        .bind(user_id)
+        .bind(page_size)
+        .bind(offset)
+        .fetch_all(pool)
+        .await?;
+        (rows, total)
+    } else {
+        let total: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM writeup WHERE user_id = $1 OR team_id = ANY($2)",
+        )
+        .bind(user_id)
+        .bind(team_ids)
+        .fetch_one(pool)
+        .await?;
+        let rows = sqlx::query_as::<_, Writeup>(
+            "SELECT * FROM writeup WHERE user_id = $1 OR team_id = ANY($2) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",
+        )
+        .bind(user_id)
+        .bind(team_ids)
+        .bind(page_size)
+        .bind(offset)
+        .fetch_all(pool)
+        .await?;
+        (rows, total)
+    };
+    Ok((rows, total))
+}
+
 pub async fn find_by_user(
     pool: &PgPool,
     user_id: i64,
     page: i64,
     page_size: i64,
 ) -> Result<(Vec<Writeup>, i64)> {
-    // Show all writeups where user is the submitter OR is in the team
-    let total: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM writeup WHERE user_id = $1",
-    )
-    .bind(user_id)
-    .fetch_one(pool)
-    .await?;
-
-    let rows = sqlx::query_as::<_, Writeup>(
-        "SELECT * FROM writeup WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3",
-    )
-    .bind(user_id)
-    .bind(page_size)
-    .bind((page - 1) * page_size)
-    .fetch_all(pool)
-    .await?;
-
-    Ok((rows, total))
+    find_by_user_or_teams(pool, user_id, &[], page, page_size).await
 }
 
 pub async fn find_by_game(
@@ -250,32 +277,32 @@ pub async fn delete_by_id(pool: &PgPool, id: i64) -> Result<()> {
     Ok(())
 }
 
-/// Returns accounts of other submitters who uploaded the same file hash for this game.
+/// Check if the same file hash was already submitted by another team or user for this game.
 pub async fn find_duplicate_hash(
     pool: &PgPool,
     game_id: i64,
     user_id: i64,
     team_id: Option<i64>,
     file_hash: &str,
-) -> Result<Vec<String>> {
-    let rows: Vec<String> = if let Some(tid) = team_id {
+) -> Result<bool> {
+    let exists: bool = if let Some(tid) = team_id {
         sqlx::query_scalar(
-            "SELECT user_account FROM writeup WHERE game_id = $1 AND team_id != $2 AND file_hash = $3",
+            "SELECT EXISTS(SELECT 1 FROM writeup WHERE game_id = $1 AND team_id IS DISTINCT FROM $2 AND file_hash = $3)",
         )
         .bind(game_id)
         .bind(tid)
         .bind(file_hash)
-        .fetch_all(pool)
+        .fetch_one(pool)
         .await?
     } else {
         sqlx::query_scalar(
-            "SELECT user_account FROM writeup WHERE game_id = $1 AND user_id != $2 AND team_id IS NULL AND file_hash = $3",
+            "SELECT EXISTS(SELECT 1 FROM writeup WHERE game_id = $1 AND (user_id != $2 OR team_id IS NOT NULL) AND file_hash = $3)",
         )
         .bind(game_id)
         .bind(user_id)
         .bind(file_hash)
-        .fetch_all(pool)
+        .fetch_one(pool)
         .await?
     };
-    Ok(rows)
+    Ok(exists)
 }

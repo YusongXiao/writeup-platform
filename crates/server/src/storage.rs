@@ -104,9 +104,16 @@ pub async fn zip_game_writeups(
                 continue;
             }
         };
+        let safe_name = w.team_name.as_deref().unwrap_or(&w.user_account);
+        let safe_slug: String = safe_name.chars().map(|c| match c {
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '\0'..='\x1f' => '_',
+            _ => c,
+        }).collect();
+        let safe_slug = safe_slug.trim_matches('.').trim();
+        let safe_slug = if safe_slug.is_empty() { "unknown" } else { safe_slug };
         let entry_name = format!(
             "writeups-{}/{}-{}.{}",
-            w.game_id, w.user_account, w.user_id, w.file_type
+            w.game_id, safe_slug, w.user_id, w.file_type
         );
         zip.start_file(&entry_name, options)?;
         zip.write_all(&data)?;

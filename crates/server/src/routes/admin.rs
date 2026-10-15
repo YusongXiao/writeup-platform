@@ -106,13 +106,20 @@ async fn download_all(
     Ok((headers, zip_data))
 }
 
-async fn download_one(
-    State(state): State<Arc<AppState>>,
-    RequiredToken(token): RequiredToken,
-    Path((game_id, user_id)): Path<(i64, i64)>,
-) -> Result<impl IntoResponse> {
-    require_game_admin(&state, &token, game_id).await?;
+async fn find_writeup_for_admin(
+    state: &AppState,
+    game_id: i64,
+    id_or_user_id: i64,
+) -> Result<database::writeup::Writeup> {
+    // 1. Try finding directly by primary key writeup_id
+    if let Some(w) = database::writeup::find_by_id_and_game(&state.db, id_or_user_id, game_id)
+        .await
+        .map_err(anyhow::Error::from)?
+    {
+        return Ok(w);
+    }
 
+    // 2. Fallback: try finding by user_id
     let host_type: Option<i32> = sqlx::query_scalar("SELECT host_type FROM game WHERE id = $1")
         .bind(game_id)
         .fetch_optional(&state.r2s_db)
@@ -123,7 +130,7 @@ async fn download_one(
         sqlx::query_scalar::<_, i64>(
             "SELECT t.id FROM team t JOIN user2_team u2t ON u2t.team_id = t.id WHERE u2t.user_id = $1 AND t.game_id = $2 LIMIT 1",
         )
-        .bind(user_id)
+        .bind(id_or_user_id)
         .bind(game_id)
         .fetch_optional(&state.r2s_db)
         .await
@@ -132,44 +139,29 @@ async fn download_one(
         None
     };
 
-    let w = database::writeup::find_by_user_and_game(&state.db, user_id, game_id, team_id)
+    database::writeup::find_by_user_and_game(&state.db, id_or_user_id, game_id, team_id)
         .await
         .map_err(anyhow::Error::from)?
-        .ok_or_else(|| AppError::NotFound("writeup not found".into()))?;
+        .ok_or_else(|| AppError::NotFound("writeup not found".into()))
+}
 
+async fn download_one(
+    State(state): State<Arc<AppState>>,
+    RequiredToken(token): RequiredToken,
+    Path((game_id, writeup_id)): Path<(i64, i64)>,
+) -> Result<impl IntoResponse> {
+    require_game_admin(&state, &token, game_id).await?;
+    let w = find_writeup_for_admin(&state, game_id, writeup_id).await?;
     crate::routes::writeup::serve_file(state.config.storage.path.clone(), w).await
 }
 
 async fn delete_one(
     State(state): State<Arc<AppState>>,
     RequiredToken(token): RequiredToken,
-    Path((game_id, user_id)): Path<(i64, i64)>,
+    Path((game_id, writeup_id)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse> {
     require_game_admin(&state, &token, game_id).await?;
-
-    let host_type: Option<i32> = sqlx::query_scalar("SELECT host_type FROM game WHERE id = $1")
-        .bind(game_id)
-        .fetch_optional(&state.r2s_db)
-        .await
-        .map_err(anyhow::Error::from)?;
-
-    let team_id = if host_type == Some(1) {
-        sqlx::query_scalar::<_, i64>(
-            "SELECT t.id FROM team t JOIN user2_team u2t ON u2t.team_id = t.id WHERE u2t.user_id = $1 AND t.game_id = $2 LIMIT 1",
-        )
-        .bind(user_id)
-        .bind(game_id)
-        .fetch_optional(&state.r2s_db)
-        .await
-        .map_err(anyhow::Error::from)?
-    } else {
-        None
-    };
-
-    let w = database::writeup::find_by_user_and_game(&state.db, user_id, game_id, team_id)
-        .await
-        .map_err(anyhow::Error::from)?
-        .ok_or_else(|| AppError::NotFound("writeup not found".into()))?;
+    let w = find_writeup_for_admin(&state, game_id, writeup_id).await?;
 
     database::writeup::delete_by_id(&state.db, w.id)
         .await

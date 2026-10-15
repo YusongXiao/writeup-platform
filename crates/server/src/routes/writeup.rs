@@ -57,7 +57,7 @@ struct TeamRow {
 fn sanitize_filename(s: &str) -> String {
     s.chars()
         .map(|c| match c {
-            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '\0' => '_',
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '\0'..='\x1f' => '_',
             _ => c,
         })
         .collect()
@@ -153,16 +153,15 @@ async fn submit_writeup(
 
     // Check for duplicate hash from another team/user (admins bypass)
     if !is_admin {
-        let duplicates = database::writeup::find_duplicate_hash(
+        let is_duplicate = database::writeup::find_duplicate_hash(
             &state.db, game_id, token.id, team_id, &file_hash,
         )
         .await
         .map_err(anyhow::Error::from)?;
-        if !duplicates.is_empty() {
-            return Err(AppError::Forbidden(format!(
-                "duplicate writeup: same file already submitted by {}",
-                duplicates.join(", ")
-            )));
+        if is_duplicate {
+            return Err(AppError::Forbidden(
+                "duplicate writeup: this file has already been submitted in this game".into(),
+            ));
         }
     }
 
@@ -235,9 +234,20 @@ async fn my_writeups(
 ) -> Result<impl IntoResponse> {
     let page = q.page.max(1);
     let page_size = q.page_size.clamp(1, 50);
-    let (items, total) = database::writeup::find_by_user(&state.db, token.id, page, page_size)
-        .await
-        .map_err(anyhow::Error::from)?;
+
+    let team_ids: Vec<i64> = sqlx::query_scalar(
+        "SELECT team_id FROM user2_team WHERE user_id = $1"
+    )
+    .bind(token.id)
+    .fetch_all(&state.r2s_db)
+    .await
+    .unwrap_or_default();
+
+    let (items, total) = database::writeup::find_by_user_or_teams(
+        &state.db, token.id, &team_ids, page, page_size,
+    )
+    .await
+    .map_err(anyhow::Error::from)?;
     Ok(Json(serde_json::json!({ "items": items, "total": total })))
 }
 
@@ -320,7 +330,11 @@ pub async fn serve_file(
         _ => "application/octet-stream",
     };
 
-    // RFC 5987 percent-encode for non-ASCII filenames
+    // RFC 5987 percent-encode for UTF-8 filename, and safe ASCII fallback for filename="..."
+    let ascii_fallback: String = w.file_name.chars()
+        .map(|c| if c.is_ascii() && c != '"' && c != '\\' && !c.is_control() { c } else { '_' })
+        .collect();
+
     let encoded_name: String = w.file_name.bytes().flat_map(|b| {
         if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~') {
             vec![b as char]
@@ -328,9 +342,10 @@ pub async fn serve_file(
             format!("%{:02X}", b).chars().collect()
         }
     }).collect();
+
     let disposition = format!(
         "attachment; filename=\"{}\"; filename*=UTF-8''{}",
-        w.file_name.replace('"', "\\\""),
+        ascii_fallback,
         encoded_name
     );
 
