@@ -130,18 +130,22 @@ if needed.
 | -------- | --------------------------------------------- | ------------- | ------------------------------ |
 | `POST`   | `/api/account/login`                          | none          | Exchange captcha code for JWT  |
 | `GET`    | `/api/games`                                  | optional      | List training arenas / events  |
+| `GET`    | `/api/games/{game_id}`                         | optional      | Get a game by ID               |
 | `GET`    | `/api/writeup`                                | required      | List my writeups               |
 | `POST`   | `/api/writeup/{game_id}`                      | required      | Submit / replace a writeup     |
 | `GET`    | `/api/writeup/{game_id}`                      | required      | Get my writeup for a game      |
 | `GET`    | `/api/writeup/{game_id}/file`                 | required      | Download my file               |
 | `GET`    | `/api/admin/game/{game_id}/writeup`           | game admin    | List all writeups for a game   |
 | `GET`    | `/api/admin/game/{game_id}/writeup/download`  | game admin    | Download all as ZIP            |
-| `GET`    | `/api/admin/game/{game_id}/writeup/{uid}/file`| game admin    | Download one writeup           |
-| `DELETE` | `/api/admin/game/{game_id}/writeup/{uid}`     | game admin    | Delete a writeup               |
+| `GET`    | `/api/admin/game/{game_id}/writeup/{writeup_id}/file`| game admin    | Download one writeup           |
+| `DELETE` | `/api/admin/game/{game_id}/writeup/{writeup_id}`     | game admin    | Delete a writeup               |
 
 Authentication uses a `Authorization: Bearer <jwt>` header. A valid token must
 carry permission `0` (activated account); game-admin operations additionally
 require permission `5` **and** the user's id in the game's `admins` list.
+
+Single-writeup admin routes accept the writeup's `id` from the list response;
+they do not accept user ids. Hidden game details are available only to that game's admins.
 
 ## Security notes
 

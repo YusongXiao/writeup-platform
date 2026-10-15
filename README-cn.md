@@ -125,18 +125,22 @@ npm run dev
 | -------- | --------------------------------------------- | ---------- | ------------------------------ |
 | `POST`   | `/api/account/login`                          | 无         | 用验证码换取 JWT               |
 | `GET`    | `/api/games`                                  | 可选       | 列出训练场 / 赛事              |
+| `GET`    | `/api/games/{game_id}`                         | 可选       | 按 ID 获取赛事详情             |
 | `GET`    | `/api/writeup`                                | 需要       | 列出我的 Writeup               |
 | `POST`   | `/api/writeup/{game_id}`                      | 需要       | 提交 / 覆盖 Writeup            |
 | `GET`    | `/api/writeup/{game_id}`                      | 需要       | 获取我在某比赛的 Writeup       |
 | `GET`    | `/api/writeup/{game_id}/file`                 | 需要       | 下载我的文件                   |
 | `GET`    | `/api/admin/game/{game_id}/writeup`           | 比赛管理员 | 列出某比赛的全部 Writeup       |
 | `GET`    | `/api/admin/game/{game_id}/writeup/download`  | 比赛管理员 | 打包下载全部（ZIP）            |
-| `GET`    | `/api/admin/game/{game_id}/writeup/{uid}/file`| 比赛管理员 | 下载单个 Writeup               |
-| `DELETE` | `/api/admin/game/{game_id}/writeup/{uid}`     | 比赛管理员 | 删除某个 Writeup               |
+| `GET`    | `/api/admin/game/{game_id}/writeup/{writeup_id}/file`| 比赛管理员 | 下载单个 Writeup               |
+| `DELETE` | `/api/admin/game/{game_id}/writeup/{writeup_id}`     | 比赛管理员 | 删除某个 Writeup               |
 
 鉴权使用 `Authorization: Bearer <jwt>` 请求头。有效 token 需带有权限位 `0`
 （账号已激活）；比赛管理员操作还额外要求权限位 `5`，**且**用户 id 在该比赛的
 `admins` 列表中。
+
+管理员下载、删除单份 Writeup 时，应使用列表返回的 Writeup `id`，不接受用户 id。
+隐藏赛事的详情仅对本场赛事管理员开放。
 
 ## 安全说明
 

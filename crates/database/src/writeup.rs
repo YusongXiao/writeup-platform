@@ -85,7 +85,7 @@ pub async fn upsert(pool: &PgPool, w: UpsertWriteup<'_>) -> Result<Writeup> {
                 (user_id, user_account, user_nickname, game_id, game_name,
                  file_path, file_name, file_size, file_type, file_hash, submitted_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
-            ON CONFLICT (user_id, game_id) DO UPDATE SET
+            ON CONFLICT (user_id, game_id) WHERE team_id IS NULL DO UPDATE SET
                 user_account  = EXCLUDED.user_account,
                 user_nickname = EXCLUDED.user_nickname,
                 game_name     = EXCLUDED.game_name,
@@ -167,7 +167,7 @@ pub async fn find_by_user_and_game(
     Ok(row)
 }
 
-/// Admin: find by user_id and game_id (direct lookup for download)
+/// Admin: find by writeup ID and game ID.
 pub async fn find_by_id_and_game(
     pool: &PgPool,
     writeup_id: i64,
@@ -192,12 +192,12 @@ pub async fn find_by_user_or_teams(
 ) -> Result<(Vec<Writeup>, i64)> {
     let offset = (page - 1) * page_size;
     let (rows, total) = if team_ids.is_empty() {
-        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM writeup WHERE user_id = $1")
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM writeup WHERE user_id = $1 AND team_id IS NULL")
             .bind(user_id)
             .fetch_one(pool)
             .await?;
         let rows = sqlx::query_as::<_, Writeup>(
-            "SELECT * FROM writeup WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3",
+            "SELECT * FROM writeup WHERE user_id = $1 AND team_id IS NULL ORDER BY updated_at DESC LIMIT $2 OFFSET $3",
         )
         .bind(user_id)
         .bind(page_size)
@@ -207,14 +207,14 @@ pub async fn find_by_user_or_teams(
         (rows, total)
     } else {
         let total: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM writeup WHERE user_id = $1 OR team_id = ANY($2)",
+            "SELECT COUNT(*) FROM writeup WHERE (user_id = $1 AND team_id IS NULL) OR team_id = ANY($2)",
         )
         .bind(user_id)
         .bind(team_ids)
         .fetch_one(pool)
         .await?;
         let rows = sqlx::query_as::<_, Writeup>(
-            "SELECT * FROM writeup WHERE user_id = $1 OR team_id = ANY($2) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",
+            "SELECT * FROM writeup WHERE (user_id = $1 AND team_id IS NULL) OR team_id = ANY($2) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",
         )
         .bind(user_id)
         .bind(team_ids)

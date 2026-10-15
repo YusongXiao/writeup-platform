@@ -38,15 +38,6 @@ fn default_ssl_mode() -> String {
     "disable".to_string()
 }
 
-impl DatabaseConfig {
-    pub fn dsn(&self) -> String {
-        format!(
-            "postgresql://{}:{}@{}:{}/{}?sslmode={}",
-            self.user, self.password, self.host, self.port, self.db, self.ssl_mode
-        )
-    }
-}
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct R2sApiConfig {
     pub base_url: String,

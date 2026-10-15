@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import UiIcon from '@/components/UiIcon.vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getGames, type GameItem } from '@/api/game'
+import { getGame, type GameItem } from '@/api/game'
 import { getGameWriteups, downloadGameWriteups, downloadUserWriteup, deleteUserWriteup, type WriteupRecord } from '@/api/writeup'
 
 const route = useRoute()
@@ -31,10 +31,10 @@ async function load() {
   error.value = ''
   try {
     const [gamesRes, writeupRes] = await Promise.all([
-      getGames({ page: 1, page_size: 100 }),
+      getGame(gameId),
       getGameWriteups(gameId, { page: page.value, page_size: PAGE_SIZE }),
     ])
-    game.value = gamesRes.items.find(g => g.id === gameId) ?? null
+    game.value = gamesRes
     items.value = writeupRes.items
     total.value = writeupRes.total
   } catch (e: any) {

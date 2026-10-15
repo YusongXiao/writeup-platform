@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import UiIcon from './UiIcon.vue'
 
-const emit = defineEmits<{
-  (e: 'file', file: File): void
-}>()
-
 const dragging = ref(false)
-const selectedFile = ref<File | null>(null)
+const selectedFile = defineModel<File | null>({ default: null })
+const fileInput = ref<HTMLInputElement | null>(null)
 const error = ref('')
+
+watch(selectedFile, (file) => {
+  if (!file && fileInput.value) fileInput.value.value = ''
+})
 
 const ACCEPTED = ['.pdf', '.docx']
 const ACCEPT_MIME = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
@@ -26,7 +27,6 @@ function pick(file: File) {
   if (msg) { error.value = msg; return }
   error.value = ''
   selectedFile.value = file
-  emit('file', file)
 }
 
 function onDrop(e: DragEvent) {
@@ -62,6 +62,7 @@ function clear() {
       @drop.prevent="onDrop"
     >
       <input
+        ref="fileInput"
         type="file"
         :accept="ACCEPTED.join(',')"
         class="hidden-input" aria-label="选择 Writeup 文件"

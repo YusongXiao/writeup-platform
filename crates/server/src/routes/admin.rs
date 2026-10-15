@@ -31,8 +31,8 @@ pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/game/{game_id}/writeup", get(list_writeups))
         .route("/game/{game_id}/writeup/download", get(download_all))
-        .route("/game/{game_id}/writeup/{user_id}/file", get(download_one))
-        .route("/game/{game_id}/writeup/{user_id}", axum::routing::delete(delete_one))
+        .route("/game/{game_id}/writeup/{writeup_id}/file", get(download_one))
+        .route("/game/{game_id}/writeup/{writeup_id}", axum::routing::delete(delete_one))
 }
 
 #[derive(sqlx::FromRow)]
@@ -109,37 +109,9 @@ async fn download_all(
 async fn find_writeup_for_admin(
     state: &AppState,
     game_id: i64,
-    id_or_user_id: i64,
+    writeup_id: i64,
 ) -> Result<database::writeup::Writeup> {
-    // 1. Try finding directly by primary key writeup_id
-    if let Some(w) = database::writeup::find_by_id_and_game(&state.db, id_or_user_id, game_id)
-        .await
-        .map_err(anyhow::Error::from)?
-    {
-        return Ok(w);
-    }
-
-    // 2. Fallback: try finding by user_id
-    let host_type: Option<i32> = sqlx::query_scalar("SELECT host_type FROM game WHERE id = $1")
-        .bind(game_id)
-        .fetch_optional(&state.r2s_db)
-        .await
-        .map_err(anyhow::Error::from)?;
-
-    let team_id = if host_type == Some(1) {
-        sqlx::query_scalar::<_, i64>(
-            "SELECT t.id FROM team t JOIN user2_team u2t ON u2t.team_id = t.id WHERE u2t.user_id = $1 AND t.game_id = $2 LIMIT 1",
-        )
-        .bind(id_or_user_id)
-        .bind(game_id)
-        .fetch_optional(&state.r2s_db)
-        .await
-        .map_err(anyhow::Error::from)?
-    } else {
-        None
-    };
-
-    database::writeup::find_by_user_and_game(&state.db, id_or_user_id, game_id, team_id)
+    database::writeup::find_by_id_and_game(&state.db, writeup_id, game_id)
         .await
         .map_err(anyhow::Error::from)?
         .ok_or_else(|| AppError::NotFound("writeup not found".into()))

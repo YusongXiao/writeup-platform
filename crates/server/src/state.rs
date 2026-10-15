@@ -10,13 +10,12 @@ pub struct AppState {
 
 impl AppState {
     pub async fn new(cfg: config::Config) -> Result<Self> {
-        let dsn = cfg.database.dsn();
         tracing::info!("connecting to own db: postgresql://{}:***@{}:{}/{}", cfg.database.user, cfg.database.host, cfg.database.port, cfg.database.db);
-        let db = database::connect(&dsn).await?;
+        let db = database::connect(&cfg.database).await?;
         database::migrate(&db).await?;
         tracing::info!("own database connected and migrated");
 
-        let r2s_db = database::connect(&cfg.r2s_database.dsn()).await?;
+        let r2s_db = database::connect(&cfg.r2s_database).await?;
         tracing::info!("ret2shell database connected (read-only)");
 
         let http = reqwest::Client::builder()

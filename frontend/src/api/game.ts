@@ -17,6 +17,10 @@ export interface GamesResponse {
   total: number
 }
 
+export function getGame(gameId: number): Promise<GameItem> {
+  return api.get(`/games/${gameId}`).then(r => r.data)
+}
+
 export function getGames(params?: {
   page?: number
   page_size?: number

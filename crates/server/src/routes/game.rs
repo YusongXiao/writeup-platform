@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    extract::{Query, State},
+    extract::{Path, Query, State},
     response::IntoResponse,
     routing::get,
     Json,
@@ -9,7 +9,11 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::{error::Result, state::AppState};
+use crate::{
+    error::{AppError, Result},
+    middleware::auth::OptionalToken,
+    state::AppState,
+};
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct GameRow {
@@ -37,6 +41,27 @@ pub struct GameItem {
     pub admins: Vec<i64>,
 }
 
+impl From<GameRow> for GameItem {
+    fn from(r: GameRow) -> Self {
+        let admins = r
+            .admins
+            .as_array()
+            .map(|arr| arr.iter().filter_map(|v| v.as_i64()).collect())
+            .unwrap_or_default();
+        Self {
+            id: r.id,
+            name: r.name,
+            brief: r.brief,
+            host_type: r.host_type,
+            start_at: r.start_at,
+            end_at: r.end_at,
+            archive_at: r.archive_at,
+            can_submit: can_submit(r.host_type, r.hidden, r.archive_at),
+            admins,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct GameListQuery {
     #[serde(default = "default_page")]
@@ -59,7 +84,33 @@ fn can_submit(host_type: i32, hidden: bool, archive_at: Option<chrono::DateTime<
 }
 
 pub fn router() -> Router<Arc<AppState>> {
-    Router::new().route("/", get(list_games))
+    Router::new()
+        .route("/", get(list_games))
+        .route("/{game_id}", get(get_game))
+}
+
+async fn get_game(
+    State(state): State<Arc<AppState>>,
+    OptionalToken(token): OptionalToken,
+    Path(game_id): Path<i64>,
+) -> Result<impl IntoResponse> {
+    let row = sqlx::query_as::<_, GameRow>(
+        r#"SELECT id, name, brief, host_type, start_at, end_at, archive_at, hidden, admins
+           FROM game WHERE id = $1"#,
+    )
+    .bind(game_id)
+    .fetch_optional(&state.r2s_db)
+    .await
+    .map_err(anyhow::Error::from)?
+    .ok_or_else(|| AppError::NotFound("game not found".into()))?;
+
+    let hidden = row.hidden;
+    let item = GameItem::from(row);
+    if hidden && !token.is_some_and(|t| t.is_basic() && t.is_game_admin(&item.admins)) {
+        return Err(AppError::NotFound("game not found".into()));
+    }
+
+    Ok(Json(item))
 }
 
 async fn list_games(
@@ -117,26 +168,7 @@ async fn list_games(
         }
     };
 
-    let items: Vec<GameItem> = rows
-        .into_iter()
-        .map(|r| {
-            let admins: Vec<i64> = r.admins
-                .as_array()
-                .map(|arr| arr.iter().filter_map(|v| v.as_i64()).collect())
-                .unwrap_or_default();
-            GameItem {
-                id: r.id,
-                name: r.name,
-                brief: r.brief,
-                host_type: r.host_type,
-                start_at: r.start_at,
-                end_at: r.end_at,
-                archive_at: r.archive_at,
-                can_submit: can_submit(r.host_type, r.hidden, r.archive_at),
-                admins,
-            }
-        })
-        .collect();
+    let items: Vec<GameItem> = rows.into_iter().map(GameItem::from).collect();
 
     Ok(Json(serde_json::json!({ "items": items, "total": total })))
 }

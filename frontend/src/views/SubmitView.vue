@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { getGames, type GameItem } from '@/api/game'
+import { getGame, type GameItem } from '@/api/game'
 import { submitWriteup, getMyWriteupForGame, type WriteupRecord } from '@/api/writeup'
 import FileUpload from '@/components/FileUpload.vue'
 import UiIcon from '@/components/UiIcon.vue'
@@ -51,10 +51,10 @@ async function load() {
   loading.value = true
   try {
     const [gamesRes, existingRes] = await Promise.all([
-      getGames({ page: 1, page_size: 100 }),
+      getGame(gameId),
       getMyWriteupForGame(gameId),
     ])
-    game.value = gamesRes.items.find(g => g.id === gameId) ?? null
+    game.value = gamesRes
     existing.value = existingRes
     if (game.value) lockReason.value = computeLockReason(game.value)
   } catch {
@@ -110,7 +110,7 @@ onMounted(load)
             </div>
             <div v-if="lockReason" class="status-message warning">{{ lockMessage(lockReason) }}</div>
             <template v-else>
-              <FileUpload @file="selectedFile = $event" />
+              <FileUpload v-model="selectedFile" />
               <div v-if="success" class="status-message success" role="status"><UiIcon name="check" :size="18" />提交成功！</div>
               <div v-if="error" class="status-message error" role="alert">{{ error }}</div>
               <div class="submit-footer"><span>请确认文件内容完整后提交</span><button class="btn btn-primary" :disabled="!selectedFile || submitting" @click="handleSubmit"><span v-if="submitting" class="btn-spinner"></span><UiIcon v-else name="upload" :size="18" />{{ submitting ? '提交中…' : (existing ? '更新 Writeup' : '提交 Writeup') }}</button></div>

@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use crate::{
     error::{AppError, Result},
-    middleware::auth::RequiredToken,
+    middleware::auth::{RequiredToken, Token},
     state::AppState,
     storage,
 };
@@ -257,25 +257,7 @@ async fn get_writeup(
     RequiredToken(token): RequiredToken,
     Path(game_id): Path<i64>,
 ) -> Result<impl IntoResponse> {
-    // Need to know if this is a competition to look up team_id
-    let host_type: Option<i32> = sqlx::query_scalar("SELECT host_type FROM game WHERE id = $1")
-        .bind(game_id)
-        .fetch_optional(&state.r2s_db)
-        .await
-        .map_err(anyhow::Error::from)?;
-
-    let team_id = if host_type == Some(1) {
-        sqlx::query_scalar::<_, i64>(
-            "SELECT t.id FROM team t JOIN user2_team u2t ON u2t.team_id = t.id WHERE u2t.user_id = $1 AND t.game_id = $2 LIMIT 1",
-        )
-        .bind(token.id)
-        .bind(game_id)
-        .fetch_optional(&state.r2s_db)
-        .await
-        .map_err(anyhow::Error::from)?
-    } else {
-        None
-    };
+    let team_id = current_team_id(&state, &token, game_id).await?;
 
     let w = database::writeup::find_by_user_and_game(&state.db, token.id, game_id, team_id)
         .await
@@ -289,24 +271,7 @@ async fn download_my_file(
     RequiredToken(token): RequiredToken,
     Path(game_id): Path<i64>,
 ) -> Result<impl IntoResponse> {
-    let host_type: Option<i32> = sqlx::query_scalar("SELECT host_type FROM game WHERE id = $1")
-        .bind(game_id)
-        .fetch_optional(&state.r2s_db)
-        .await
-        .map_err(anyhow::Error::from)?;
-
-    let team_id = if host_type == Some(1) {
-        sqlx::query_scalar::<_, i64>(
-            "SELECT t.id FROM team t JOIN user2_team u2t ON u2t.team_id = t.id WHERE u2t.user_id = $1 AND t.game_id = $2 LIMIT 1",
-        )
-        .bind(token.id)
-        .bind(game_id)
-        .fetch_optional(&state.r2s_db)
-        .await
-        .map_err(anyhow::Error::from)?
-    } else {
-        None
-    };
+    let team_id = current_team_id(&state, &token, game_id).await?;
 
     let w = database::writeup::find_by_user_and_game(&state.db, token.id, game_id, team_id)
         .await
@@ -314,6 +279,31 @@ async fn download_my_file(
         .ok_or_else(|| AppError::NotFound("no writeup submitted for this game".into()))?;
 
     serve_file(state.config.storage.path.clone(), w).await
+}
+
+// Use the same ownership rule as submission: game admins submit personally.
+async fn current_team_id(state: &AppState, token: &Token, game_id: i64) -> Result<Option<i64>> {
+    let game: Option<(i32, serde_json::Value)> =
+        sqlx::query_as("SELECT host_type, admins FROM game WHERE id = $1")
+            .bind(game_id)
+            .fetch_optional(&state.r2s_db)
+            .await
+            .map_err(anyhow::Error::from)?;
+    let Some((1, admins)) = game else {
+        return Ok(None);
+    };
+    let admins: Vec<i64> = serde_json::from_value(admins).unwrap_or_default();
+    if token.is_game_admin(&admins) {
+        return Ok(None);
+    }
+    sqlx::query_scalar(
+        "SELECT t.id FROM team t JOIN user2_team u2t ON u2t.team_id = t.id WHERE u2t.user_id = $1 AND t.game_id = $2 LIMIT 1",
+    )
+    .bind(token.id)
+    .bind(game_id)
+    .fetch_optional(&state.r2s_db)
+    .await
+    .map_err(|e| AppError::Internal(e.into()))
 }
 
 pub async fn serve_file(
