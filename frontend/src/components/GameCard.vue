@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, dateLocale } from '@/i18n'
 import type { GameItem } from '@/api/game'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
@@ -10,7 +11,7 @@ const router = useRouter()
 
 function formatDate(s: string | null): string {
   if (!s) return '—'
-  return new Date(s).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })
+  return new Date(s).toLocaleDateString(dateLocale, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function handleSubmit() {
@@ -31,20 +32,20 @@ function handleAdmin() {
     <div class="game-content panel-body">
       <div class="card-header">
         <UiIcon :name="game.host_type === 0 ? 'training' : 'flag'" :size="24" />
-        <span class="tag" :class="game.can_submit ? 'tag-success' : 'tag-warning'">{{ game.can_submit ? '开放提交' : '已归档' }}</span>
+        <span class="tag" :class="game.can_submit ? 'tag-success' : 'tag-warning'">{{ game.can_submit ? t('game.open') : t('game.archived') }}</span>
       </div>
       <h2 class="game-name">{{ game.name }}</h2>
-      <p class="game-brief">{{ game.brief || '暂无简介' }}</p>
+      <p class="game-brief">{{ game.brief || t('game.noBrief') }}</p>
       <div class="game-meta">
         <UiIcon name="clock" :size="15" />
         <span v-if="game.start_at || game.end_at">{{ formatDate(game.start_at) }} — {{ formatDate(game.end_at) }}</span>
-        <span v-else>长期开放</span>
+        <span v-else>{{ t('game.alwaysOpen') }}</span>
       </div>
     </div>
     <div class="card-actions">
-      <span class="card-type">{{ game.host_type === 0 ? '训练场' : '赛事' }}</span>
-      <button v-if="game.can_submit" class="btn btn-primary btn-sm" @click="handleSubmit"><UiIcon name="upload" :size="16" />提交 Writeup</button>
-      <button v-if="auth.isLoggedIn && auth.isGameAdmin(game.admins ?? [])" class="btn btn-sm" @click="handleAdmin"><UiIcon name="settings" :size="16" />管理</button>
+      <span class="card-type">{{ game.host_type === 0 ? t('common.training') : t('common.competition') }}</span>
+      <button v-if="game.can_submit" class="btn btn-primary btn-sm" @click="handleSubmit"><UiIcon name="upload" :size="16" />{{ t('game.submit') }}</button>
+      <button v-if="auth.isLoggedIn && auth.isGameAdmin(game.admins ?? [])" class="btn btn-sm" @click="handleAdmin"><UiIcon name="settings" :size="16" />{{ t('common.manage') }}</button>
     </div>
   </article>
 </template>

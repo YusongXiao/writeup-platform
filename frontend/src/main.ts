@@ -6,6 +6,10 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import { useThemeStore } from './stores/theme'
+import { dateLocale, t } from './i18n'
+
+document.documentElement.lang = dateLocale
+document.title = t('app.title')
 
 const app = createApp(App)
 const pinia = createPinia()

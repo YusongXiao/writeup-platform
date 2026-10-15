@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getGames, type GameItem } from '@/api/game'
@@ -25,7 +26,7 @@ async function load() {
     items.value = res.items
     total.value = res.total
   } catch {
-    if (version === loadVersion) error.value = '加载失败，请刷新重试'
+    if (version === loadVersion) error.value = t('common.loadRetry')
   } finally {
     if (version === loadVersion) loading.value = false
   }
@@ -38,24 +39,24 @@ watch(tab, () => { page.value = 1; load() }, { immediate: true })
   <div class="home-view page-shell">
     <div class="page-heading">
       <div>
-        <h1 class="heading-title"><UiIcon :name="tab === 0 ? 'training' : 'flag'" :size="26" />{{ tab === 0 ? '训练场' : '赛事' }}</h1>
-        <p class="heading-sub">选择{{ tab === 0 ? '训练场' : '赛事' }}，提交和管理你的解题报告</p>
+        <h1 class="heading-title"><UiIcon :name="tab === 0 ? 'training' : 'flag'" :size="26" />{{ tab === 0 ? t('common.training') : t('common.competition') }}</h1>
+        <p class="heading-sub">{{ t(tab === 0 ? 'home.trainingDescription' : 'home.competitionDescription') }}</p>
       </div>
-      <span v-if="!loading && !error" class="tag collection-count">共 {{ total }} 个{{ tab === 0 ? '训练场' : '赛事' }}</span>
+      <span v-if="!loading && !error" class="tag collection-count">{{ t(tab === 0 ? 'home.trainingCount' : 'home.competitionCount', { count: total }) }}</span>
     </div>
 
-    <div v-if="loading" class="state-msg" role="status"><div class="spinner"></div><span>加载中…</span></div>
-    <div v-else-if="error" class="state-msg error" role="alert">{{ error }}<button class="btn btn-sm" @click="load">重试</button></div>
+    <div v-if="loading" class="state-msg" role="status"><div class="spinner"></div><span>{{ t('common.loading') }}</span></div>
+    <div v-else-if="error" class="state-msg error" role="alert">{{ error }}<button class="btn btn-sm" @click="load">{{ t('common.retry') }}</button></div>
     <div v-else-if="items.length === 0" class="empty-state panel">
       <UiIcon :name="tab === 0 ? 'training' : 'flag'" :size="48" />
-      <p>暂无{{ tab === 0 ? '训练场' : '赛事' }}</p>
+      <p>{{ t(tab === 0 ? 'home.noTraining' : 'home.noCompetitions') }}</p>
     </div>
     <div v-else class="game-grid"><GameCard v-for="g in items" :key="g.id" :game="g" /></div>
 
     <div v-if="total > PAGE_SIZE" class="pagination">
-      <button class="btn btn-sm" :disabled="page === 1" @click="page--; load()">上一页</button>
+      <button class="btn btn-sm" :disabled="page === 1" @click="page--; load()">{{ t('common.previous') }}</button>
       <span class="page-info">{{ page }} / {{ Math.ceil(total / PAGE_SIZE) }}</span>
-      <button class="btn btn-sm" :disabled="page * PAGE_SIZE >= total" @click="page++; load()">下一页</button>
+      <button class="btn btn-sm" :disabled="page * PAGE_SIZE >= total" @click="page++; load()">{{ t('common.next') }}</button>
     </div>
   </div>
 </template>

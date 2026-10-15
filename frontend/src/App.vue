@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
 import { ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import AppBackground from '@/components/AppBackground.vue'
 import UiIcon from '@/components/UiIcon.vue'
 import logoUrl from '@/assets/ret2shell.svg'
@@ -24,24 +26,25 @@ function logout() {
     <AppBackground />
     <header class="navbar">
       <div class="nav-inner">
-        <button class="btn btn-ghost btn-square mobile-menu-button" :aria-expanded="menuOpen" aria-controls="main-navigation" aria-label="切换导航菜单" @click="menuOpen = !menuOpen"><UiIcon :name="menuOpen ? 'close' : 'menu'" /></button>
+        <button class="btn btn-ghost btn-square mobile-menu-button" :aria-expanded="menuOpen" aria-controls="main-navigation" :aria-label="t('nav.toggle')" @click="menuOpen = !menuOpen"><UiIcon :name="menuOpen ? 'close' : 'menu'" /></button>
         <RouterLink to="/" class="nav-brand btn btn-ghost">
           <img :src="logoUrl" width="28" height="28" alt="ret2shell" />
           <span>Writeup</span>
         </RouterLink>
-        <nav id="main-navigation" class="nav-links" :class="{ open: menuOpen }" aria-label="主导航">
-          <RouterLink :to="{ name: 'home', query: { type: 'training' } }" class="btn btn-ghost nav-link" :class="{ active: route.name === 'home' && route.query.type !== 'competition' }"><UiIcon name="training" /><span>训练场</span></RouterLink>
-          <RouterLink :to="{ name: 'home', query: { type: 'competition' } }" class="btn btn-ghost nav-link" :class="{ active: route.name === 'home' && route.query.type === 'competition' }"><UiIcon name="flag" /><span>赛事</span></RouterLink>
-          <RouterLink v-if="auth.isLoggedIn" to="/my" class="btn btn-ghost nav-link" :class="{ active: route.name === 'my' || route.name === 'my-reader' }"><UiIcon name="file" /><span>我的提交</span></RouterLink>
+        <nav id="main-navigation" class="nav-links" :class="{ open: menuOpen }" :aria-label="t('nav.main')">
+          <RouterLink :to="{ name: 'home', query: { type: 'training' } }" class="btn btn-ghost nav-link" :class="{ active: route.name === 'home' && route.query.type !== 'competition' }"><UiIcon name="training" /><span>{{ t('common.training') }}</span></RouterLink>
+          <RouterLink :to="{ name: 'home', query: { type: 'competition' } }" class="btn btn-ghost nav-link" :class="{ active: route.name === 'home' && route.query.type === 'competition' }"><UiIcon name="flag" /><span>{{ t('common.competition') }}</span></RouterLink>
+          <RouterLink v-if="auth.isLoggedIn" to="/my" class="btn btn-ghost nav-link" :class="{ active: route.name === 'my' || route.name === 'my-reader' }"><UiIcon name="file" /><span>{{ t('common.mine') }}</span></RouterLink>
         </nav>
         <div class="nav-right">
+          <LanguageSwitcher />
           <ThemeSwitcher />
           <template v-if="auth.isLoggedIn">
             <span class="nav-divider" aria-hidden="true"></span>
             <span class="nav-user" :title="auth.payload?.nickname || auth.payload?.account"><UiIcon name="user" /><span>{{ auth.payload?.nickname || auth.payload?.account }}</span></span>
-            <button class="btn btn-ghost btn-square logout-button" title="退出登录" aria-label="退出登录" @click="logout"><UiIcon name="logout" /></button>
+            <button class="btn btn-ghost btn-square logout-button" :title="t('common.logout')" :aria-label="t('common.logout')" @click="logout"><UiIcon name="logout" /></button>
           </template>
-          <RouterLink v-else to="/login" class="btn btn-primary btn-sm login-link"><UiIcon name="user" :size="18" />登录</RouterLink>
+          <RouterLink v-else to="/login" class="btn btn-primary btn-sm login-link"><UiIcon name="user" :size="18" />{{ t('common.login') }}</RouterLink>
         </div>
       </div>
     </header>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, dateLocale, translateError } from '@/i18n'
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -27,7 +28,7 @@ function formatSize(bytes: number): string {
 }
 
 function formatDate(s: string): string {
-  return new Date(s).toLocaleString('zh-CN')
+  return new Date(s).toLocaleString(dateLocale)
 }
 
 function computeLockReason(g: GameItem): string {
@@ -42,8 +43,8 @@ function computeLockReason(g: GameItem): string {
 }
 
 function lockMessage(reason: string): string {
-  if (reason === 'not_started') return '比赛还未开始，暂不接受提交'
-  if (reason === 'ended') return '比赛已归档，不再接受提交'
+  if (reason === 'not_started') return t('submit.notStarted')
+  if (reason === 'ended') return t('submit.ended')
   return ''
 }
 
@@ -58,7 +59,7 @@ async function load() {
     existing.value = existingRes
     if (game.value) lockReason.value = computeLockReason(game.value)
   } catch {
-    error.value = '加载失败'
+    error.value = t('common.loadFailed')
   } finally {
     loading.value = false
   }
@@ -74,11 +75,7 @@ async function handleSubmit() {
     success.value = true
     selectedFile.value = null
   } catch (e: any) {
-    const msg: string = e.response?.data?.error ?? ''
-    if (msg.includes('not registered')) error.value = '你尚未报名参加本次比赛'
-    else if (msg.includes('not started')) error.value = '比赛还未开始，暂不接受提交'
-    else if (msg.includes('ended')) error.value = '比赛已归档，不再接受提交'
-    else error.value = msg || '提交失败'
+    error.value = translateError(e.response?.data?.error, 'submit.failed')
   } finally {
     submitting.value = false
   }
@@ -90,35 +87,35 @@ onMounted(load)
 <template>
   <div class="submit-view page-shell">
     <div class="submit-container">
-      <button class="back-btn" @click="router.push('/')"><UiIcon name="arrowLeft" :size="16" />返回</button>
-      <div v-if="loading" class="state-msg" role="status"><div class="spinner"></div>加载中…</div>
+      <button class="back-btn" @click="router.push('/')"><UiIcon name="arrowLeft" :size="16" />{{ t('common.back') }}</button>
+      <div v-if="loading" class="state-msg" role="status"><div class="spinner"></div>{{ t('common.loading') }}</div>
       <template v-else-if="game">
         <div class="page-heading">
           <div>
             <h1 class="heading-title"><UiIcon name="upload" :size="26" />{{ game.name }}</h1>
-            <p class="heading-sub">提交你的 Writeup，记录解题过程与思路</p>
+            <p class="heading-sub">{{ t('submit.description') }}</p>
           </div>
-          <span class="tag" :class="game.host_type === 0 ? 'tag-success' : 'tag-primary'">{{ game.host_type === 0 ? '训练场' : '赛事' }}</span>
+          <span class="tag" :class="game.host_type === 0 ? 'tag-success' : 'tag-primary'">{{ game.host_type === 0 ? t('common.training') : t('common.competition') }}</span>
         </div>
         <section class="panel">
           <div class="panel-body submission-body">
-            <div class="section-heading"><UiIcon name="file" /><h2>解题报告</h2><span class="file-formats">PDF / DOCX · 最大 50 MB</span></div>
+            <div class="section-heading"><UiIcon name="file" /><h2>{{ t('submit.report') }}</h2><span class="file-formats">{{ t('submit.formats') }}</span></div>
             <div v-if="existing" class="existing-card">
-              <div class="existing-header"><span class="tag tag-success"><UiIcon name="check" :size="14" />已提交</span><span class="existing-date">{{ formatDate(existing.updated_at) }}</span></div>
+              <div class="existing-header"><span class="tag tag-success"><UiIcon name="check" :size="14" />{{ t('submit.submitted') }}</span><span class="existing-date">{{ formatDate(existing.updated_at) }}</span></div>
               <div class="existing-info"><UiIcon name="file" :size="18" /><span class="existing-name">{{ existing.file_name }}</span></div>
-              <p class="existing-hint">{{ formatSize(existing.file_size) }} · {{ existing.file_type.toUpperCase() }} · 重新上传将覆盖当前文件</p>
+              <p class="existing-hint">{{ formatSize(existing.file_size) }} · {{ existing.file_type.toUpperCase() }} · {{ t('submit.overwrite') }}</p>
             </div>
             <div v-if="lockReason" class="status-message warning">{{ lockMessage(lockReason) }}</div>
             <template v-else>
               <FileUpload v-model="selectedFile" />
-              <div v-if="success" class="status-message success" role="status"><UiIcon name="check" :size="18" />提交成功！</div>
+              <div v-if="success" class="status-message success" role="status"><UiIcon name="check" :size="18" />{{ t('submit.success') }}</div>
               <div v-if="error" class="status-message error" role="alert">{{ error }}</div>
-              <div class="submit-footer"><span>请确认文件内容完整后提交</span><button class="btn btn-primary" :disabled="!selectedFile || submitting" @click="handleSubmit"><span v-if="submitting" class="btn-spinner"></span><UiIcon v-else name="upload" :size="18" />{{ submitting ? '提交中…' : (existing ? '更新 Writeup' : '提交 Writeup') }}</button></div>
+              <div class="submit-footer"><span>{{ t('submit.confirmFile') }}</span><button class="btn btn-primary" :disabled="!selectedFile || submitting" @click="handleSubmit"><span v-if="submitting" class="btn-spinner"></span><UiIcon v-else name="upload" :size="18" />{{ submitting ? t('submit.submitting') : (existing ? t('submit.update') : t('game.submit')) }}</button></div>
             </template>
           </div>
         </section>
       </template>
-      <div v-else class="state-msg error" role="alert">{{ error || '未找到该赛事' }}</div>
+      <div v-else class="state-msg error" role="alert">{{ error || t('game.notFound') }}</div>
     </div>
   </div>
 </template>

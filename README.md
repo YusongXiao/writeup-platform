@@ -11,6 +11,7 @@ Backend: **Rust** (Axum + sqlx/PostgreSQL). Frontend: **Vue 3** (Vite + Pinia).
 
 ## Features
 
+- **Four UI languages** — Simplified Chinese, Traditional Chinese, English, and Japanese, with browser language detection and a saved language preference.
 - **Single sign-on with ret2shell** — login by exchanging a temporary captcha
   code against the ret2shell HTTP API; sessions are HS256 JWTs signed with the
   same `signing_key` as ret2shell.
@@ -123,6 +124,10 @@ npm run dev
 The SPA calls the API under `/api`, so in development point it at a running
 backend (add a Vite `server.proxy` entry for `/api`) and set `VITE_R2S_BASE`
 if needed.
+
+UI translations live in `frontend/src/i18n/`. Keep all four JSON dictionaries'
+keys and `{{ name }}` placeholders in sync. The language menu saves the selection
+and reloads the page, following ret2shell's behavior.
 
 ## API overview
 

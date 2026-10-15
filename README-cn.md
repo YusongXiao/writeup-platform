@@ -11,6 +11,7 @@ docx）。赛事管理员可以查看、批量下载和管理提交。
 
 ## 功能特性
 
+- **四种界面语言** — 简体中文、繁体中文、英语和日语，自动识别浏览器语言并保存手动选择。
 - **与 ret2shell 单点登录** —— 用临时验证码向 ret2shell HTTP API 换取登录态；
   会话为 HS256 JWT，与 ret2shell 使用相同的 `signing_key` 签名。
 - **训练场 / 赛事区分** —— `host_type = 0`（训练场）按用户提交；`host_type = 1`
@@ -118,6 +119,9 @@ npm run dev
 
 前端通过 `/api` 调用后端，因此开发时需把它指向运行中的后端（在 Vite 中为
 `/api` 添加 `server.proxy` 配置），如有需要再设置 `VITE_R2S_BASE`。
+
+界面翻译位于 `frontend/src/i18n/`，四套 JSON 词典的键和 `{{ name }}` 占位符需保持一致。
+语言菜单会保存选择并刷新页面，与 ret2shell 的行为一致。
 
 ## API 一览
 

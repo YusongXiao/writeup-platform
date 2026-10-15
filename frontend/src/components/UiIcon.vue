@@ -2,6 +2,7 @@
 withDefaults(defineProps<{ name: keyof typeof paths; size?: number }>(), { size: 20 })
 
 const paths = {
+  language: 'M3 5h12M9 3v2m4 0c-1 7-5 10-10 12m2-9c1 4 4 7 8 9m0 4 4-11 4 11m-6-4h6',
   training: 'M6 5v14M3 8v8m3-4h12m0-7v14m3-11v8',
   flag: 'M5 21V4m0 0c5-4 9 4 14 0v10c-5 4-9-4-14 0',
   file: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm0 0v6h6M8 13h8m-8 4h6',

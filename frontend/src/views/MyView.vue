@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, dateLocale } from '@/i18n'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import UiIcon from '@/components/UiIcon.vue'
@@ -12,7 +13,7 @@ const PAGE_SIZE = 20
 const router = useRouter()
 
 function formatDate(s: string): string {
-  return new Date(s).toLocaleString('zh-CN')
+  return new Date(s).toLocaleString(dateLocale)
 }
 
 function formatSize(bytes: number): string {
@@ -39,29 +40,29 @@ onMounted(load)
     <div class="my-container">
       <div class="page-heading">
         <div>
-          <h1 class="heading-title"><UiIcon name="file" :size="26" />我的提交</h1>
-          <p class="heading-sub">共 {{ total }} 份 Writeup · 查看和下载已提交的解题报告</p>
+          <h1 class="heading-title"><UiIcon name="file" :size="26" />{{ t('common.mine') }}</h1>
+          <p class="heading-sub">{{ t('mine.summary', { count: total }) }}</p>
         </div>
       </div>
 
       <div v-if="loading" class="state-msg">
-        <div class="spinner"></div> 加载中…
+        <div class="spinner"></div> {{ t('common.loading') }}
       </div>
 
       <div v-else-if="items.length === 0" class="state-msg empty">
-        还没有提交记录
+        {{ t('mine.empty') }}
       </div>
 
       <div v-else class="table-wrap panel">
         <table class="table">
           <thead>
             <tr>
-              <th>赛事</th>
-              <th>文件名</th>
-              <th>大小</th>
-              <th>类型</th>
-              <th>提交时间</th>
-              <th>操作</th>
+              <th>{{ t('common.competition') }}</th>
+              <th>{{ t('common.filename') }}</th>
+              <th>{{ t('common.size') }}</th>
+              <th>{{ t('common.type') }}</th>
+              <th>{{ t('common.submittedAt') }}</th>
+              <th>{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -73,8 +74,8 @@ onMounted(load)
               <td class="date">{{ formatDate(w.updated_at) }}</td>
               <td>
                 <div class="action-btns">
-                  <button class="btn btn-sm" @click="router.push({ name: 'my-reader', params: { gameId: w.game_id } })">预览</button>
-                  <button class="btn btn-sm" @click="downloadMyWriteup(w.game_id)">下载</button>
+                  <button class="btn btn-sm" @click="router.push({ name: 'my-reader', params: { gameId: w.game_id } })">{{ t('common.preview') }}</button>
+                  <button class="btn btn-sm" @click="downloadMyWriteup(w.game_id)">{{ t('common.download') }}</button>
                 </div>
               </td>
             </tr>
@@ -83,9 +84,9 @@ onMounted(load)
       </div>
 
       <div v-if="total > PAGE_SIZE" class="pagination">
-        <button class="btn btn-sm" :disabled="page === 1" @click="page--; load()">上一页</button>
+        <button class="btn btn-sm" :disabled="page === 1" @click="page--; load()">{{ t('common.previous') }}</button>
         <span class="page-info">{{ page }} / {{ Math.ceil(total / PAGE_SIZE) }}</span>
-        <button class="btn btn-sm" :disabled="page * PAGE_SIZE >= total" @click="page++; load()">下一页</button>
+        <button class="btn btn-sm" :disabled="page * PAGE_SIZE >= total" @click="page++; load()">{{ t('common.next') }}</button>
       </div>
     </div>
   </div>

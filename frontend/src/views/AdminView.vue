@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, dateLocale, translateError } from '@/i18n'
 import { ref, onMounted } from 'vue'
 import UiIcon from '@/components/UiIcon.vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -18,7 +19,7 @@ const error = ref('')
 const PAGE_SIZE = 50
 
 function formatDate(s: string): string {
-  return new Date(s).toLocaleString('zh-CN')
+  return new Date(s).toLocaleString(dateLocale)
 }
 
 function formatSize(bytes: number): string {
@@ -38,7 +39,7 @@ async function load() {
     items.value = writeupRes.items
     total.value = writeupRes.total
   } catch (e: any) {
-    error.value = e.response?.data?.error || '加载失败'
+    error.value = translateError(e.response?.data?.error, 'common.loadFailed')
   } finally {
     loading.value = false
   }
@@ -47,14 +48,14 @@ async function load() {
 const deleting = ref<number | null>(null)
 
 async function handleDelete(w: WriteupRecord) {
-  if (!confirm(`确认删除 ${w.team_name ?? w.user_account} 的 Writeup？此操作不可撤销。`)) return
+  if (!confirm(t('admin.deleteConfirm', { name: w.team_name ?? w.user_account }))) return
   deleting.value = w.id
   try {
     await deleteUserWriteup(gameId, w.id)
     items.value = items.value.filter(i => i.id !== w.id)
     total.value--
   } catch (e: any) {
-    alert(e.response?.data?.error || '删除失败')
+    alert(translateError(e.response?.data?.error, 'admin.deleteFailed'))
   } finally {
     deleting.value = null
   }
@@ -70,11 +71,11 @@ onMounted(load)
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="15 18 9 12 15 6"/>
         </svg>
-        返回
+        {{ t('common.back') }}
       </button>
 
       <div v-if="loading" class="state-msg">
-        <div class="spinner"></div> 加载中…
+        <div class="spinner"></div> {{ t('common.loading') }}
       </div>
 
       <div v-else-if="error" class="state-msg error">{{ error }}</div>
@@ -82,15 +83,15 @@ onMounted(load)
       <template v-else>
         <div class="page-heading">
           <div>
-            <h1 class="heading-title"><UiIcon name="settings" :size="26" />{{ game?.name ?? '赛事管理' }}</h1>
-            <p class="heading-sub">共 {{ total }} 份 Writeup</p>
+            <h1 class="heading-title"><UiIcon name="settings" :size="26" />{{ game?.name ?? t('admin.title') }}</h1>
+            <p class="heading-sub">{{ t('admin.count', { count: total }) }}</p>
           </div>
           <div class="header-actions">
             <button class="btn" @click="router.push({ name: 'admin-reader', params: { gameId } })">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M12 7v14M3 3h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5v16h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z"/>
               </svg>
-              批量阅读
+              {{ t('admin.readAll') }}
             </button>
             <button class="btn btn-primary" @click="downloadGameWriteups(gameId)">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -98,24 +99,24 @@ onMounted(load)
                 <polyline points="7 10 12 15 17 10"/>
                 <line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
-              批量下载 ZIP
+              {{ t('admin.downloadAll') }}
             </button>
           </div>
         </div>
 
-        <div v-if="items.length === 0" class="state-msg empty">暂无提交</div>
+        <div v-if="items.length === 0" class="state-msg empty">{{ t('admin.empty') }}</div>
 
         <div v-else class="table-wrap panel">
           <table class="table">
             <thead>
               <tr>
-                <th>队伍</th>
-                <th>提交人</th>
-                <th>文件名</th>
-                <th>大小</th>
-                <th>类型</th>
-                <th>提交时间</th>
-                <th>操作</th>
+                <th>{{ t('common.team') }}</th>
+                <th>{{ t('common.submitter') }}</th>
+                <th>{{ t('common.filename') }}</th>
+                <th>{{ t('common.size') }}</th>
+                <th>{{ t('common.type') }}</th>
+                <th>{{ t('common.submittedAt') }}</th>
+                <th>{{ t('common.actions') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -131,9 +132,9 @@ onMounted(load)
                 <td class="date">{{ formatDate(w.updated_at) }}</td>
                 <td>
                   <div class="action-btns">
-                    <button class="btn btn-sm" @click="router.push({ name: 'admin-reader', params: { gameId }, query: { writeup: w.id } })">预览</button>
-                    <button class="btn btn-sm" @click="downloadUserWriteup(gameId, w.id)">下载</button>
-                    <button class="btn btn-sm btn-danger" :disabled="deleting === w.id" @click="handleDelete(w)">删除</button>
+                    <button class="btn btn-sm" @click="router.push({ name: 'admin-reader', params: { gameId }, query: { writeup: w.id } })">{{ t('common.preview') }}</button>
+                    <button class="btn btn-sm" @click="downloadUserWriteup(gameId, w.id)">{{ t('common.download') }}</button>
+                    <button class="btn btn-sm btn-danger" :disabled="deleting === w.id" @click="handleDelete(w)">{{ t('common.delete') }}</button>
                   </div>
                 </td>
               </tr>
@@ -142,9 +143,9 @@ onMounted(load)
         </div>
 
         <div v-if="total > PAGE_SIZE" class="pagination">
-          <button class="btn btn-sm" :disabled="page === 1" @click="page--; load()">上一页</button>
+          <button class="btn btn-sm" :disabled="page === 1" @click="page--; load()">{{ t('common.previous') }}</button>
           <span class="page-info">{{ page }} / {{ Math.ceil(total / PAGE_SIZE) }}</span>
-          <button class="btn btn-sm" :disabled="page * PAGE_SIZE >= total" @click="page++; load()">下一页</button>
+          <button class="btn btn-sm" :disabled="page * PAGE_SIZE >= total" @click="page++; load()">{{ t('common.next') }}</button>
         </div>
       </template>
     </div>
