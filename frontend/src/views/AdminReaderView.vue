@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, dateLocale, translateError } from '@/i18n'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { downloadUserWriteup, getGameWriteups, type WriteupRecord } from '@/api/writeup'
@@ -16,7 +17,7 @@ const downloading = ref<number[]>([])
 const search = ref('')
 const previewVersion = ref(0)
 const selected = computed(() => items.value.find(w => w.id === Number(route.query.writeup)))
-const gameName = computed(() => items.value[0]?.game_name || `比赛 #${gameId.value}`)
+const gameName = computed(() => items.value[0]?.game_name || t('game.fallback', { id: gameId.value }))
 const filteredItems = computed(() => {
   const query = search.value.trim().toLocaleLowerCase()
   return items.value.filter(w => [w.user_account, w.user_nickname, w.team_name].some(s => s?.toLocaleLowerCase().includes(query)))
@@ -45,7 +46,7 @@ async function load() {
       await router.replace({ query: { ...route.query, writeup: first.id } })
     }
   } catch (e: any) {
-    if (version === loadVersion) error.value = e.response?.data?.error || '加载提交列表失败，请重试'
+    if (version === loadVersion) error.value = translateError(e.response?.data?.error, 'reader.loadListFailed')
   } finally {
     if (version === loadVersion) loading.value = false
   }
@@ -61,14 +62,14 @@ async function download(w: WriteupRecord) {
   try {
     await downloadUserWriteup(gameId.value, w.id)
   } catch {
-    downloadError.value = `${w.file_name} 下载失败，请重试`
+    downloadError.value = t('reader.downloadFailed', { name: w.file_name })
   } finally {
     downloading.value = downloading.value.filter(id => id !== w.id)
   }
 }
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleString('zh-CN', { hour12: false })
+  return new Date(value).toLocaleString(dateLocale, { hour12: false })
 }
 
 watch(gameId, load, { immediate: true })
@@ -84,48 +85,48 @@ watch(() => selected.value?.id, async () => {
     <header class="reader-header">
       <RouterLink class="back-link btn btn-ghost btn-sm" :to="{ name: 'admin', params: { gameId } }">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-        返回管理
+        {{ t('reader.backAdmin') }}
       </RouterLink>
       <div class="reader-title">
         <h1>{{ gameName }}</h1>
-        <span>批量阅读 · {{ items.length }} 份 Writeup</span>
+        <span>{{ t('reader.summary', { count: items.length }) }}</span>
       </div>
     </header>
 
-    <div v-if="loading" class="reader-state" role="status">正在加载提交列表…</div>
+    <div v-if="loading" class="reader-state" role="status">{{ t('reader.loadingList') }}</div>
     <div v-else-if="error" class="reader-state" role="alert">
       <p>{{ error }}</p>
-      <button class="text-button" @click="load">重新加载</button>
+      <button class="text-button" @click="load">{{ t('common.reload') }}</button>
     </div>
-    <div v-else-if="!items.length" class="reader-state">当前比赛暂无提交</div>
+    <div v-else-if="!items.length" class="reader-state">{{ t('reader.empty') }}</div>
 
     <div v-else class="reader-layout">
-      <aside class="submission-sidebar" aria-label="Writeup 提交列表">
+      <aside class="submission-sidebar" :aria-label="t('reader.listLabel')">
         <div class="sidebar-header">
-          <h2>提交列表 <span>{{ items.length }}</span></h2>
-          <div class="search-field"><UiIcon name="search" :size="16" /><input v-model="search" type="search" placeholder="搜索用户名 / 队伍名" aria-label="搜索用户名或队伍名" /></div>
+          <h2>{{ t('reader.list') }} <span>{{ items.length }}</span></h2>
+          <div class="search-field"><UiIcon name="search" :size="16" /><input v-model="search" type="search" :placeholder="t('reader.search')" :aria-label="t('reader.searchLabel')" /></div>
         </div>
         <div class="submission-list">
           <div v-for="w in filteredItems" :key="w.id" class="writeup-card" :class="{ active: selected?.id === w.id }">
             <button class="submission-select" :aria-pressed="selected?.id === w.id" @click="selectWriteup(w)">
               <span class="submitter" :title="`${w.user_nickname} (${w.user_account})`">{{ w.user_nickname || w.user_account }}</span>
               <span class="account">{{ w.user_account }}</span>
-              <span class="team" :title="w.team_name || '无队伍'">{{ w.team_name || '无队伍' }}</span>
-              <span class="submitted-at">提交时间：{{ formatDate(w.updated_at) }}</span>
+              <span class="team" :title="w.team_name || t('reader.noTeam')">{{ w.team_name || t('reader.noTeam') }}</span>
+              <span class="submitted-at">{{ t('reader.submittedAt', { time: formatDate(w.updated_at) }) }}</span>
               <span class="file-type">{{ w.file_type.toUpperCase() }}</span>
             </button>
-            <button class="download-icon btn btn-ghost btn-sm btn-square" :disabled="downloading.includes(w.id)" :title="`下载 ${w.file_name}`" :aria-label="`下载 ${w.user_nickname || w.user_account} 的 Writeup`" @click="download(w)">
+            <button class="download-icon btn btn-ghost btn-sm btn-square" :disabled="downloading.includes(w.id)" :title="t('reader.downloadFile', { name: w.file_name })" :aria-label="t('reader.downloadUser', { name: w.user_nickname || w.user_account })" @click="download(w)">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M12 3v12m-5-5 5 5 5-5"/>
               </svg>
             </button>
           </div>
-          <p v-if="!filteredItems.length" class="no-results">没有匹配的提交</p>
+          <p v-if="!filteredItems.length" class="no-results">{{ t('reader.noResults') }}</p>
         </div>
         <p v-if="downloadError" class="download-error" role="alert">{{ downloadError }}</p>
       </aside>
 
-      <section class="preview-panel" aria-label="Writeup 预览">
+      <section class="preview-panel" :aria-label="t('reader.preview')">
         <template v-if="selected">
           <div v-if="selected.file_type.toLowerCase() !== 'pdf'" class="document-header">
             <span class="document-name" :title="selected.file_name">{{ selected.file_name }}</span>
@@ -133,11 +134,11 @@ watch(() => selected.value?.id, async () => {
           </div>
           <PdfPreview v-if="selected.file_type.toLowerCase() === 'pdf'" :key="`${gameId}-${selected.id}-${previewVersion}`" :game-id="gameId" :writeup-id="selected.id" :file-name="selected.file_name" :owner="selected.team_name || selected.user_account" @retry="previewVersion++" />
           <div v-else class="reader-state">
-            <p>此文件为 {{ selected.file_type.toUpperCase() }} 格式，暂不支持在线预览</p>
-            <button class="text-button" :disabled="downloading.includes(selected.id)" @click="download(selected)">下载文件阅读</button>
+            <p>{{ t('reader.unsupported', { type: selected.file_type.toUpperCase() }) }}</p>
+            <button class="text-button" :disabled="downloading.includes(selected.id)" @click="download(selected)">{{ t('reader.downloadRead') }}</button>
           </div>
         </template>
-        <div v-else class="reader-state">该提交不存在或已被删除，请从左侧选择其他提交</div>
+        <div v-else class="reader-state">{{ t('reader.deleted') }}</div>
       </section>
     </div>
   </div>

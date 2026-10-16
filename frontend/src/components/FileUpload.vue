@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { t } from '@/i18n'
+import { ref, watch } from 'vue'
 import UiIcon from './UiIcon.vue'
 
-const emit = defineEmits<{
-  (e: 'file', file: File): void
-}>()
-
 const dragging = ref(false)
-const selectedFile = ref<File | null>(null)
+const selectedFile = defineModel<File | null>({ default: null })
+const fileInput = ref<HTMLInputElement | null>(null)
 const error = ref('')
+
+watch(selectedFile, (file) => {
+  if (!file && fileInput.value) fileInput.value.value = ''
+})
 
 const ACCEPTED = ['.pdf', '.docx']
 const ACCEPT_MIME = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
@@ -16,8 +18,8 @@ const MAX_SIZE = 50 * 1024 * 1024
 
 function validate(file: File): string {
   const ext = '.' + file.name.split('.').pop()?.toLowerCase()
-  if (!ACCEPTED.includes(ext)) return `仅支持 PDF 和 docx 格式`
-  if (file.size > MAX_SIZE) return `文件大小不能超过 50 MB`
+  if (!ACCEPTED.includes(ext)) return t('upload.unsupported')
+  if (file.size > MAX_SIZE) return t('upload.tooLarge')
   return ''
 }
 
@@ -26,7 +28,6 @@ function pick(file: File) {
   if (msg) { error.value = msg; return }
   error.value = ''
   selectedFile.value = file
-  emit('file', file)
 }
 
 function onDrop(e: DragEvent) {
@@ -62,9 +63,10 @@ function clear() {
       @drop.prevent="onDrop"
     >
       <input
+        ref="fileInput"
         type="file"
         :accept="ACCEPTED.join(',')"
-        class="hidden-input" aria-label="选择 Writeup 文件"
+        class="hidden-input" :aria-label="t('upload.choose')"
         @change="onInput"
       />
 
@@ -76,8 +78,8 @@ function clear() {
             <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
         </div>
-        <p class="upload-hint">拖拽文件到此处，或 <span class="link">点击选择</span></p>
-        <p class="upload-types">支持 PDF、docx · 最大 50 MB</p>
+        <p class="upload-hint">{{ t('upload.drop') }} <span class="link">{{ t('upload.browse') }}</span></p>
+        <p class="upload-types">{{ t('upload.formats') }}</p>
       </template>
 
       <template v-else>
@@ -87,7 +89,7 @@ function clear() {
             <span class="file-name">{{ selectedFile.name }}</span>
             <span class="file-size">{{ formatSize(selectedFile.size) }}</span>
           </div>
-          <button class="clear-btn btn btn-ghost btn-sm btn-square" type="button" @click.prevent="clear" title="移除" aria-label="移除所选文件">
+          <button class="clear-btn btn btn-ghost btn-sm btn-square" type="button" @click.prevent="clear" :title="t('upload.remove')" :aria-label="t('upload.removeLabel')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>

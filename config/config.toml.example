@@ -3,8 +3,9 @@ host = "0.0.0.0"
 port = 8080
 
 [auth]
-# Must match ret2shell's auth.signing_key exactly (HS256 JWT secret)
-signing_key = "change-me-to-ret2shell-signing-key"
+# Independent JWT signing secret for Writeup Platform
+# Does NOT need to match ret2shell's signing_key
+signing_key = "change-me-to-signing-key"
 
 [database]
 # This platform's own PostgreSQL (stores writeup metadata)

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, translateError } from '@/i18n'
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -17,7 +18,7 @@ const error = ref('')
 async function handleLogin() {
   const trimmed = code.value.trim().toUpperCase()
   if (!trimmed || !/^[0-9A-F]{1,6}$/.test(trimmed)) {
-    error.value = '请输入有效的 6 位验证码（数字和大写字母）'
+    error.value = t('login.invalidCode')
     return
   }
   loading.value = true
@@ -27,7 +28,7 @@ async function handleLogin() {
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
   } catch (e: any) {
-    error.value = e.response?.data?.error || '验证码无效或已过期，请重新生成'
+    error.value = translateError(e.response?.data?.error, 'login.expired')
     code.value = ''
   } finally {
     loading.value = false
@@ -41,32 +42,32 @@ async function handleLogin() {
       <div class="login-content panel-body">
         <form class="login-form" @submit.prevent="handleLogin">
           <div class="login-header">
-            <h1>登录 Writeup</h1>
-            <p>使用 ret2shell 临时验证码登录</p>
+            <h1>{{ t('login.title') }}</h1>
+            <p>{{ t('login.description') }}</p>
           </div>
           <div class="field">
-            <label for="login-code" class="field-label">临时验证码</label>
+            <label for="login-code" class="field-label">{{ t('login.code') }}</label>
             <div class="code-field">
               <UiIcon name="key" />
-              <input id="login-code" v-model="code" type="text" class="field-input code-input" placeholder="例如：A3F012" maxlength="6" autocomplete="off" spellcheck="false" required />
+              <input id="login-code" v-model="code" type="text" class="field-input code-input" :placeholder="t('login.example')" maxlength="6" autocomplete="off" spellcheck="false" required />
             </div>
-            <p class="field-hint">请输入 6 位十六进制验证码</p>
+            <p class="field-hint">{{ t('login.hint') }}</p>
           </div>
           <div v-if="error" class="status-message error" role="alert">{{ error }}</div>
           <button type="submit" class="btn btn-primary login-submit" :disabled="loading || !code.trim()">
             <span v-if="loading" class="btn-spinner"></span>
             <UiIcon v-else name="arrowRight" :size="18" />
-            <span>{{ loading ? '验证中…' : '登录' }}</span>
+            <span>{{ loading ? t('login.verifying') : t('common.login') }}</span>
           </button>
         </form>
         <aside class="login-guide">
           <img :src="logoUrl" width="72" height="72" alt="ret2shell" />
           <h2>ret2shell</h2>
-          <p>解题之后，记录思路。</p>
+          <p>{{ t('login.tagline') }}</p>
           <ol>
-            <li>在 ret2shell 个人中心生成临时识别码</li>
-            <li>复制识别码，粘贴到左侧输入框</li>
-            <li>登录后选择比赛并提交 Writeup</li>
+            <li>{{ t('login.step1') }}</li>
+            <li>{{ t('login.step2') }}</li>
+            <li>{{ t('login.step3') }}</li>
           </ol>
         </aside>
       </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, translateError } from '@/i18n'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { downloadMyWriteup, getMyWriteupForGame, type WriteupRecord } from '@/api/writeup'
@@ -25,7 +26,7 @@ async function load() {
     const result = await getMyWriteupForGame(gameId.value)
     if (version === loadVersion) writeup.value = result
   } catch (e: any) {
-    if (version === loadVersion) error.value = e.response?.data?.error || '加载提交信息失败，请重试'
+    if (version === loadVersion) error.value = translateError(e.response?.data?.error, 'reader.loadInfoFailed')
   } finally {
     if (version === loadVersion) loading.value = false
   }
@@ -37,7 +38,7 @@ async function download() {
   try {
     await downloadMyWriteup(gameId.value)
   } catch {
-    downloadError.value = '下载失败，请重试'
+    downloadError.value = t('common.downloadFailed')
   } finally {
     downloading.value = false
   }
@@ -50,19 +51,19 @@ onBeforeUnmount(() => { loadVersion++ })
 <template>
   <div class="my-reader">
     <header class="reader-header">
-      <RouterLink to="/my" class="btn btn-ghost btn-sm back-link"><UiIcon name="arrowLeft" :size="16" />返回我的提交</RouterLink>
+      <RouterLink to="/my" class="btn btn-ghost btn-sm back-link"><UiIcon name="arrowLeft" :size="16" />{{ t('reader.backMine') }}</RouterLink>
       <div class="reader-title">
-        <h1 :title="writeup?.game_name">{{ writeup?.game_name || 'Writeup 预览' }}</h1>
-        <span>我的提交</span>
+        <h1 :title="writeup?.game_name">{{ writeup?.game_name || t('reader.preview') }}</h1>
+        <span>{{ t('common.mine') }}</span>
       </div>
-      <button v-if="writeup" class="btn btn-sm" :disabled="downloading" @click="download"><UiIcon name="download" :size="16" />下载</button>
+      <button v-if="writeup" class="btn btn-sm" :disabled="downloading" @click="download"><UiIcon name="download" :size="16" />{{ t('common.download') }}</button>
     </header>
     <p v-if="downloadError" class="download-error" role="alert">{{ downloadError }}</p>
-    <div v-if="loading" class="reader-state" role="status"><div class="spinner"></div>正在加载提交信息…</div>
-    <div v-else-if="error" class="reader-state" role="alert"><p>{{ error }}</p><button class="btn btn-sm" @click="load">重试</button></div>
-    <div v-else-if="!writeup" class="reader-state">该比赛暂无提交，或文件已被删除</div>
+    <div v-if="loading" class="reader-state" role="status"><div class="spinner"></div>{{ t('reader.loadingInfo') }}</div>
+    <div v-else-if="error" class="reader-state" role="alert"><p>{{ error }}</p><button class="btn btn-sm" @click="load">{{ t('common.retry') }}</button></div>
+    <div v-else-if="!writeup" class="reader-state">{{ t('reader.noSubmission') }}</div>
     <PdfPreview v-else-if="writeup.file_type.toLowerCase() === 'pdf'" :key="`${gameId}-${writeup.id}-${previewVersion}`" source="mine" :game-id="gameId" :writeup-id="writeup.id" :file-name="writeup.file_name" :owner="writeup.team_name || writeup.user_account" @retry="previewVersion++" />
-    <div v-else class="reader-state"><UiIcon name="file" :size="40" /><p>{{ writeup.file_name }}</p><p>此文件为 {{ writeup.file_type.toUpperCase() }} 格式，暂不支持在线预览，请下载后阅读</p></div>
+    <div v-else class="reader-state"><UiIcon name="file" :size="40" /><p>{{ writeup.file_name }}</p><p>{{ t('reader.unsupportedDownload', { type: writeup.file_type.toUpperCase() }) }}</p></div>
   </div>
 </template>
 

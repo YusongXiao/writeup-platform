@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { t } from '@/i18n'
+import { useDismissibleMenu } from '@/composables/useDismissibleMenu'
 import { useThemeStore, type ThemePreference } from '@/stores/theme'
 import UiIcon from './UiIcon.vue'
 
 const theme = useThemeStore()
-const popover = ref<HTMLDetailsElement>()
+const popover = useDismissibleMenu()
 const options = [
-  { value: 'light', label: '浅色', icon: 'sun' },
-  { value: 'dark', label: '深色', icon: 'moon' },
-  { value: 'system', label: '跟随系统', icon: 'monitor' },
+  { value: 'light', label: t('theme.light'), icon: 'sun' },
+  { value: 'dark', label: t('theme.dark'), icon: 'moon' },
+  { value: 'system', label: t('theme.system'), icon: 'monitor' },
 ] as const
 
 function select(value: ThemePreference) {
@@ -19,8 +20,8 @@ function select(value: ThemePreference) {
 
 <template>
   <details ref="popover" class="theme-switcher" @keydown.esc="popover && (popover.open = false)">
-    <summary class="btn btn-ghost btn-square" title="外观设置" aria-label="外观设置"><UiIcon :name="theme.isDark ? 'moon' : 'sun'" /></summary>
-    <div class="theme-menu panel" role="group" aria-label="外观模式">
+    <summary class="btn btn-ghost btn-square" :title="t('theme.settings')" :aria-label="t('theme.settings')"><UiIcon :name="theme.isDark ? 'moon' : 'sun'" /></summary>
+    <div class="theme-menu panel" role="group" :aria-label="t('theme.mode')">
       <button v-for="option in options" :key="option.value" class="btn btn-ghost btn-sm theme-option" :class="{ active: theme.preference === option.value }" :aria-pressed="theme.preference === option.value" @click="select(option.value)">
         <UiIcon :name="option.icon" :size="18" /><span>{{ option.label }}</span><UiIcon v-if="theme.preference === option.value" name="check" :size="16" />
       </button>

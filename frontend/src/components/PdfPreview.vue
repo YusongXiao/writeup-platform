@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { getDocument, GlobalWorkerOptions, type PDFDocumentLoadingTask } from 'pdfjs-dist'
 import { EventBus, PDFLinkService, PDFViewer } from 'pdfjs-dist/web/pdf_viewer.mjs'
@@ -64,7 +65,7 @@ onMounted(async () => {
   eventBus.on('pagechanging', ({ pageNumber: page }: { pageNumber: number }) => { pageNumber.value = page })
   eventBus.on('scalechanging', ({ scale: value }: { scale: number }) => { scale.value = value })
   eventBus.on('pagerendered', ({ error: renderError }: { error?: Error }) => {
-    if (renderError) error.value = 'PDF 页面渲染失败，请下载原文件阅读'
+    if (renderError) error.value = t('pdf.renderFailed')
   })
   resizeObserver = new ResizeObserver(() => {
     if (viewer?.currentScaleValue === 'page-width') fitWidth()
@@ -85,7 +86,7 @@ onMounted(async () => {
       wasmUrl: `${assets}wasm/`,
     })
     loadingTask.onPassword = () => {
-      error.value = '此 PDF 已加密，请下载后使用本地阅读器打开'
+      error.value = t('pdf.encrypted')
       loading.value = false
       void loadingTask?.destroy()
     }
@@ -97,10 +98,10 @@ onMounted(async () => {
   } catch (e: any) {
     if (controller.signal.aborted) return
     if (!error.value) {
-      error.value = e.response?.status === 403 ? '没有权限预览此 Writeup'
-        : e.response?.status === 401 ? '登录已过期，请重新登录'
-        : e.response?.status === 404 ? '文件不存在或已被删除'
-        : 'PDF 加载失败或文件已损坏，请重试或下载原文件阅读'
+      error.value = e.response?.status === 403 ? t('pdf.forbidden')
+        : e.response?.status === 401 ? t('pdf.expired')
+        : e.response?.status === 404 ? t('pdf.notFound')
+        : t('pdf.loadFailed')
     }
     loading.value = false
   }
@@ -116,20 +117,20 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="pdf-preview">
-    <div class="pdf-toolbar" aria-label="PDF 阅读工具">
+    <div class="pdf-toolbar" :aria-label="t('pdf.toolbar')">
       <span class="document-name" :title="fileName">{{ fileName }}</span>
       <div class="toolbar-controls">
         <div class="toolbar-group">
-          <button title="上一页" aria-label="上一页" :disabled="loading || !!error || pageNumber <= 1" @click="goToPage(pageNumber - 1)">‹</button>
-          <input :value="pageNumber" type="number" min="1" :max="pageCount || 1" :disabled="loading || !!error" aria-label="页码" @change="changePage" />
+          <button :title="t('common.previous')" :aria-label="t('common.previous')" :disabled="loading || !!error || pageNumber <= 1" @click="goToPage(pageNumber - 1)">‹</button>
+          <input :value="pageNumber" type="number" min="1" :max="pageCount || 1" :disabled="loading || !!error" :aria-label="t('pdf.page')" @change="changePage" />
           <span>/ {{ pageCount }}</span>
-          <button title="下一页" aria-label="下一页" :disabled="loading || !!error || pageNumber >= pageCount" @click="goToPage(pageNumber + 1)">›</button>
+          <button :title="t('common.next')" :aria-label="t('common.next')" :disabled="loading || !!error || pageNumber >= pageCount" @click="goToPage(pageNumber + 1)">›</button>
         </div>
         <div class="toolbar-group">
-          <button title="缩小" aria-label="缩小" :disabled="loading || !!error || scale <= 0.25" @click="zoom(1 / 1.2)">−</button>
+          <button :title="t('pdf.zoomOut')" :aria-label="t('pdf.zoomOut')" :disabled="loading || !!error || scale <= 0.25" @click="zoom(1 / 1.2)">−</button>
           <span class="zoom-value">{{ Math.round(scale * 100) }}%</span>
-          <button title="放大" aria-label="放大" :disabled="loading || !!error || scale >= 4" @click="zoom(1.2)">+</button>
-          <button class="fit-button" :disabled="loading || !!error" @click="fitWidth">适合宽度</button>
+          <button :title="t('pdf.zoomIn')" :aria-label="t('pdf.zoomIn')" :disabled="loading || !!error || scale >= 4" @click="zoom(1.2)">+</button>
+          <button class="fit-button" :disabled="loading || !!error" @click="fitWidth">{{ t('pdf.fitWidth') }}</button>
         </div>
       </div>
       <span class="document-owner" :title="owner">{{ owner }}</span>
@@ -140,8 +141,8 @@ onBeforeUnmount(() => {
       </div>
       <div v-if="loading || error" class="pdf-state" :role="error ? 'alert' : 'status'">
         <span v-if="loading && !error" class="spinner" aria-hidden="true"></span>
-        <p>{{ error || '正在加载 PDF…' }}</p>
-        <button v-if="error" class="retry-button" @click="$emit('retry')">重试</button>
+        <p>{{ error || t('pdf.loading') }}</p>
+        <button v-if="error" class="retry-button" @click="$emit('retry')">{{ t('common.retry') }}</button>
       </div>
     </div>
   </div>

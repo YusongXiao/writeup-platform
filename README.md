@@ -11,6 +11,7 @@ Backend: **Rust** (Axum + sqlx/PostgreSQL). Frontend: **Vue 3** (Vite + Pinia).
 
 ## Features
 
+- **Four UI languages** — Simplified Chinese, Traditional Chinese, English, and Japanese, with browser language detection and a saved language preference.
 - **Single sign-on with ret2shell** — login by exchanging a temporary captcha
   code against the ret2shell HTTP API; sessions are HS256 JWTs signed with the
   same `signing_key` as ret2shell.
@@ -56,9 +57,7 @@ Browser ──▶ nginx ──▶ /api ──▶ Rust server ──▶ PostgreSQ
 
 The server connects to **two** databases: its own (writeup metadata, migrations
 run automatically on startup) and the ret2shell database **read-only** (used to
-list games, resolve teams, and check game admins). Authentication is delegated
-to the ret2shell API, and the resulting JWT is trusted by both services because
-they share the same signing key.
+list games, resolve teams, and check game admins). 
 
 ## Quick start (Docker Compose)
 
@@ -93,7 +92,7 @@ they share the same signing key.
 | Section        | Key              | Notes                                                    |
 | -------------- | ---------------- | -------------------------------------------------------- |
 | `server`       | `host`, `port`   | HTTP bind address (default `0.0.0.0:8080`)               |
-| `auth`         | `signing_key`    | HS256 JWT secret — **must match ret2shell**              |
+| `auth`         | `signing_key`    | HS256 JWT secret — **no need match ret2shell**              |
 | `database`     | `host`…          | This platform's own PostgreSQL                            |
 | `r2s_database` | `host`…          | ret2shell PostgreSQL (**read-only**); games/teams/users  |
 | `r2s_api`      | `base_url`       | ret2shell HTTP API (captcha login proxy)                 |
@@ -109,8 +108,6 @@ cp config/config.toml.example config/config.toml   # adjust hosts to your local 
 CONFIG_PATH=./config/config.toml cargo run -p server
 ```
 
-SQLx metadata is committed under `.sqlx/`, so the server compiles with
-`SQLX_OFFLINE=true` without a live database.
 
 **Frontend:**
 
@@ -124,30 +121,30 @@ The SPA calls the API under `/api`, so in development point it at a running
 backend (add a Vite `server.proxy` entry for `/api`) and set `VITE_R2S_BASE`
 if needed.
 
+
 ## API overview
 
 | Method   | Path                                          | Auth          | Purpose                        |
 | -------- | --------------------------------------------- | ------------- | ------------------------------ |
 | `POST`   | `/api/account/login`                          | none          | Exchange captcha code for JWT  |
 | `GET`    | `/api/games`                                  | optional      | List training arenas / events  |
+| `GET`    | `/api/games/{game_id}`                         | optional      | Get a game by ID               |
 | `GET`    | `/api/writeup`                                | required      | List my writeups               |
 | `POST`   | `/api/writeup/{game_id}`                      | required      | Submit / replace a writeup     |
 | `GET`    | `/api/writeup/{game_id}`                      | required      | Get my writeup for a game      |
 | `GET`    | `/api/writeup/{game_id}/file`                 | required      | Download my file               |
 | `GET`    | `/api/admin/game/{game_id}/writeup`           | game admin    | List all writeups for a game   |
 | `GET`    | `/api/admin/game/{game_id}/writeup/download`  | game admin    | Download all as ZIP            |
-| `GET`    | `/api/admin/game/{game_id}/writeup/{uid}/file`| game admin    | Download one writeup           |
-| `DELETE` | `/api/admin/game/{game_id}/writeup/{uid}`     | game admin    | Delete a writeup               |
+| `GET`    | `/api/admin/game/{game_id}/writeup/{writeup_id}/file`| game admin    | Download one writeup           |
+| `DELETE` | `/api/admin/game/{game_id}/writeup/{writeup_id}`     | game admin    | Delete a writeup               |
 
 Authentication uses a `Authorization: Bearer <jwt>` header. A valid token must
 carry permission `0` (activated account); game-admin operations additionally
 require permission `5` **and** the user's id in the game's `admins` list.
 
+
 ## Security notes
 
-- `config/config.toml` holds database passwords and the ret2shell signing key.
-  It is **gitignored** — commit `config/config.toml.example` instead and never
-  leak production secrets.
 - Uploaded filenames are sanitized and storage paths are constructed from
   server-generated ids, not user input.
 

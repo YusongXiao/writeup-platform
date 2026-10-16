@@ -11,6 +11,7 @@ docx）。赛事管理员可以查看、批量下载和管理提交。
 
 ## 功能特性
 
+- **四种界面语言** — 简体中文、繁体中文、英语和日语，自动识别浏览器语言并保存手动选择。
 - **与 ret2shell 单点登录** —— 用临时验证码向 ret2shell HTTP API 换取登录态；
   会话为 HS256 JWT，与 ret2shell 使用相同的 `signing_key` 签名。
 - **训练场 / 赛事区分** —— `host_type = 0`（训练场）按用户提交；`host_type = 1`
@@ -52,9 +53,7 @@ docx）。赛事管理员可以查看、批量下载和管理提交。
                                     └──▶ ret2shell HTTP API          : 验证码 / 登录
 ```
 
-服务连接 **两个**数据库：自有库（存放 writeup 元数据，启动时自动执行迁移）和
-ret2shell 数据库（**只读**，用于查询比赛列表、解析队伍、判断比赛管理员）。鉴权
-委托给 ret2shell API，产出的 JWT 被双方信任，因为二者共享同一个签名密钥。
+服务连接 **两个**数据库：自有库（存放 writeup 元数据，启动时自动执行迁移）和 ret2shell 数据库（**只读**，用于查询比赛列表、解析队伍、判断比赛管理员）。
 
 ## 快速开始（Docker Compose）
 
@@ -89,7 +88,7 @@ ret2shell 数据库（**只读**，用于查询比赛列表、解析队伍、判
 | 配置段         | 键              | 说明                                                     |
 | -------------- | --------------- | -------------------------------------------------------- |
 | `server`       | `host`、`port`  | HTTP 监听地址（默认 `0.0.0.0:8080`）                     |
-| `auth`         | `signing_key`   | HS256 JWT 密钥 —— **必须与 ret2shell 一致**              |
+| `auth`         | `signing_key`   | HS256 JWT 密钥 —— **无需与 ret2shell 一致**              |
 | `database`     | `host`…         | 本平台自有的 PostgreSQL                                   |
 | `r2s_database` | `host`…         | ret2shell 的 PostgreSQL（**只读**）：比赛/队伍/用户       |
 | `r2s_api`      | `base_url`      | ret2shell HTTP API（验证码登录代理）                     |
@@ -105,8 +104,6 @@ cp config/config.toml.example config/config.toml   # 按本地环境调整 host
 CONFIG_PATH=./config/config.toml cargo run -p server
 ```
 
-SQLx 元数据已提交在 `.sqlx/` 下，因此设置 `SQLX_OFFLINE=true` 即可在没有实时
-数据库的情况下编译。
 
 **前端：**
 
@@ -119,29 +116,30 @@ npm run dev
 前端通过 `/api` 调用后端，因此开发时需把它指向运行中的后端（在 Vite 中为
 `/api` 添加 `server.proxy` 配置），如有需要再设置 `VITE_R2S_BASE`。
 
+
 ## API 一览
 
 | 方法     | 路径                                          | 鉴权       | 用途                           |
 | -------- | --------------------------------------------- | ---------- | ------------------------------ |
 | `POST`   | `/api/account/login`                          | 无         | 用验证码换取 JWT               |
 | `GET`    | `/api/games`                                  | 可选       | 列出训练场 / 赛事              |
+| `GET`    | `/api/games/{game_id}`                         | 可选       | 按 ID 获取赛事详情             |
 | `GET`    | `/api/writeup`                                | 需要       | 列出我的 Writeup               |
 | `POST`   | `/api/writeup/{game_id}`                      | 需要       | 提交 / 覆盖 Writeup            |
 | `GET`    | `/api/writeup/{game_id}`                      | 需要       | 获取我在某比赛的 Writeup       |
 | `GET`    | `/api/writeup/{game_id}/file`                 | 需要       | 下载我的文件                   |
 | `GET`    | `/api/admin/game/{game_id}/writeup`           | 比赛管理员 | 列出某比赛的全部 Writeup       |
 | `GET`    | `/api/admin/game/{game_id}/writeup/download`  | 比赛管理员 | 打包下载全部（ZIP）            |
-| `GET`    | `/api/admin/game/{game_id}/writeup/{uid}/file`| 比赛管理员 | 下载单个 Writeup               |
-| `DELETE` | `/api/admin/game/{game_id}/writeup/{uid}`     | 比赛管理员 | 删除某个 Writeup               |
+| `GET`    | `/api/admin/game/{game_id}/writeup/{writeup_id}/file`| 比赛管理员 | 下载单个 Writeup               |
+| `DELETE` | `/api/admin/game/{game_id}/writeup/{writeup_id}`     | 比赛管理员 | 删除某个 Writeup               |
 
 鉴权使用 `Authorization: Bearer <jwt>` 请求头。有效 token 需带有权限位 `0`
 （账号已激活）；比赛管理员操作还额外要求权限位 `5`，**且**用户 id 在该比赛的
 `admins` 列表中。
 
+
 ## 安全说明
 
-- `config/config.toml` 保存数据库密码和 ret2shell 签名密钥。该文件已被
-  **gitignore** —— 请改为提交 `config/config.toml.example`，切勿泄露生产密钥。
 - 上传的文件名会被清洗，存储路径由服务端生成的 id 拼接，而非用户输入。
 
 ## 相关项目
